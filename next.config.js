@@ -2,12 +2,10 @@
 const nextConfig = {
   output: 'standalone',
   reactStrictMode: true,
-  eslint: {
-    ignoreDuringBuilds: true
-  },
+  // נוסיף את השורה הזו לביטול בדיקות טיפוסים בזמן בנייה
   typescript: {
-    ignoreBuildErrors: true
-  }
+    ignoreBuildErrors: true,
+  },
 }
 
 module.exports = nextConfig

@@ -2,6 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 
+// פונקציית עזר לבדיקה האם אנחנו בדפדפן
+const isBrowser = () => typeof window !== 'undefined';
+
 interface Task {
   id: number;
   clientName: string;
@@ -27,19 +30,13 @@ const formatDate = (dateStr: string) => {
   }).format(date);
 };
 
-// פונקציה לבקשת הרשאות התראות
-const requestNotificationPermission = async () => {
-  if ('Notification' in window) {
-    const permission = await Notification.requestPermission();
-    return permission === 'granted';
-  }
-  return false;
-};
-
+// מנהל האחסון המעודכן עם בדיקת דפדפן
 const StorageManager = {
   saveTasks: (tasks: Task[]): boolean => {
+    if (!isBrowser()) return false;
     try {
       localStorage.setItem('taskManagerTasks', JSON.stringify(tasks));
+      console.log('Tasks saved successfully:', tasks);
       return true;
     } catch (error) {
       console.error('Error saving tasks:', error);
@@ -48,10 +45,12 @@ const StorageManager = {
   },
 
   loadTasks: (): Task[] => {
+    if (!isBrowser()) return [];
     try {
       const savedTasks = localStorage.getItem('taskManagerTasks');
       if (savedTasks) {
         const parsedTasks = JSON.parse(savedTasks) as Task[];
+        console.log('Tasks loaded successfully:', parsedTasks);
         return parsedTasks;
       }
       return [];
@@ -60,6 +59,16 @@ const StorageManager = {
       return [];
     }
   }
+};
+
+// פונקציה לבקשת הרשאות התראות
+const requestNotificationPermission = async () => {
+  if (!isBrowser()) return false;
+  if ('Notification' in window) {
+    const permission = await Notification.requestPermission();
+    return permission === 'granted';
+  }
+  return false;
 };
 
 const TaskManager: React.FC = () => {
@@ -74,13 +83,17 @@ const TaskManager: React.FC = () => {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
+
   // הגדרת הרשאות התראות בטעינה
   useEffect(() => {
-    requestNotificationPermission();
+    if (isBrowser()) {
+      requestNotificationPermission();
+    }
   }, []);
 
   // בדיקת זמינות localStorage
   useEffect(() => {
+    if (!isBrowser()) return;
     try {
       localStorage.setItem('test', 'test');
       localStorage.removeItem('test');
@@ -96,6 +109,8 @@ const TaskManager: React.FC = () => {
 
   // מערכת התראות
   useEffect(() => {
+    if (!isBrowser()) return;
+
     const checkReminders = () => {
       const now = new Date().getTime();
       
@@ -138,7 +153,6 @@ const TaskManager: React.FC = () => {
     const interval = setInterval(checkReminders, 10000); // בדיקה כל 10 שניות
     return () => clearInterval(interval);
   }, [tasks]);
-
   // טיפול בהגשת הטופס
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -157,6 +171,13 @@ const TaskManager: React.FC = () => {
       };
       setTasks(prevTasks => [...prevTasks, taskWithId]);
       alert('המשימה נוספה בהצלחה!');
+
+      if (isBrowser() && 'Notification' in window && Notification.permission === 'granted') {
+        new Notification('משימה חדשה נוספה', {
+          body: `משימה: ${taskWithId.task}\nלקוח: ${taskWithId.clientName}`,
+          icon: '/icons/icon-192x192.png'
+        });
+      }
     }
 
     // איפוס הטופס
@@ -220,243 +241,246 @@ const TaskManager: React.FC = () => {
       }
       return a.completed ? 1 : -1;
     });
-    return (
-      <div className="container mx-auto p-4 space-y-6" dir="rtl">
-        {/* כפתורי גיבוי ושחזור */}
-        <div className="bg-white rounded-lg shadow-md p-4">
-          <div className="flex justify-end gap-2">
-            <button
-              onClick={() => {
-                const data = JSON.stringify(tasks);
-                const blob = new Blob([data], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `task-manager-backup-${new Date().toISOString()}.json`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-              }}
-              className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
-            >
-              גיבוי נתונים
-            </button>
+
+  return (
+    <div className="container mx-auto p-4 space-y-6" dir="rtl">
+      {/* כפתורי גיבוי ושחזור */}
+      <div className="bg-white rounded-lg shadow-md p-4">
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={() => {
+              if (!isBrowser()) return;
+              const data = JSON.stringify(tasks);
+              const blob = new Blob([data], { type: 'application/json' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `task-manager-backup-${new Date().toISOString()}.json`;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+            }}
+            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+          >
+            גיבוי נתונים
+          </button>
+          <input
+            type="file"
+            id="restoreFile"
+            className="hidden"
+            accept=".json"
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+              if (!isBrowser()) return;
+              const file = e.target.files?.[0];
+              if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                  try {
+                    const restoredTasks = JSON.parse(event.target?.result as string);
+                    setTasks(restoredTasks);
+                    alert('הנתונים שוחזרו בהצלחה!');
+                  } catch (error) {
+                    alert('שגיאה בשחזור הנתונים. אנא וודא שהקובץ תקין.');
+                  }
+                };
+                reader.readAsText(file);
+              }
+            }}
+          />
+          <button
+            onClick={() => isBrowser() && document.getElementById('restoreFile')?.click()}
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          >
+            שחזור מגיבוי
+          </button>
+        </div>
+      </div>
+
+      {/* טופס הוספת/עריכת משימה */}
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <h2 className="text-xl font-bold mb-4">
+          {editingTask ? 'ערוך משימה' : 'הוסף משימה חדשה'}
+        </h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <input
-              type="file"
-              id="restoreFile"
-              className="hidden"
-              accept=".json"
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  const reader = new FileReader();
-                  reader.onload = (event) => {
-                    try {
-                      const restoredTasks = JSON.parse(event.target?.result as string);
-                      setTasks(restoredTasks);
-                      alert('הנתונים שוחזרו בהצלחה!');
-                    } catch (error) {
-                      alert('שגיאה בשחזור הנתונים. אנא וודא שהקובץ תקין.');
-                    }
-                  };
-                  reader.readAsText(file);
-                }
-              }}
+              type="text"
+              placeholder="שם הלקוח"
+              value={newTask.clientName}
+              onChange={(e) => setNewTask({...newTask, clientName: e.target.value})}
+              className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
             />
-            <button
-              onClick={() => document.getElementById('restoreFile')?.click()}
-              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+            <input
+              type="text"
+              placeholder="משימה"
+              value={newTask.task}
+              onChange={(e) => setNewTask({...newTask, task: e.target.value})}
+              className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+            <div className="flex flex-col">
+              <label className="text-sm text-gray-600 mb-1">תאריך יעד</label>
+              <input
+                type="datetime-local"
+                value={newTask.dueDate}
+                onChange={(e) => setNewTask({...newTask, dueDate: e.target.value})}
+                className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+            <div className="flex flex-col">
+              <label className="text-sm text-gray-600 mb-1">תאריך תזכורת (אופציונלי)</label>
+              <input
+                type="datetime-local"
+                value={newTask.reminderDate}
+                onChange={(e) => setNewTask({...newTask, reminderDate: e.target.value})}
+                className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button 
+              type="submit"
+              className="flex-1 bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 transition-colors"
             >
-              שחזור מגיבוי
+              {editingTask ? 'עדכן משימה' : 'הוסף משימה'}
             </button>
-          </div>
-        </div>
-  
-        {/* טופס הוספת/עריכת משימה */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-bold mb-4">
-            {editingTask ? 'ערוך משימה' : 'הוסף משימה חדשה'}
-          </h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <input
-                type="text"
-                placeholder="שם הלקוח"
-                value={newTask.clientName}
-                onChange={(e) => setNewTask({...newTask, clientName: e.target.value})}
-                className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-              <input
-                type="text"
-                placeholder="משימה"
-                value={newTask.task}
-                onChange={(e) => setNewTask({...newTask, task: e.target.value})}
-                className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-              <div className="flex flex-col">
-                <label className="text-sm text-gray-600 mb-1">תאריך יעד</label>
-                <input
-                  type="datetime-local"
-                  value={newTask.dueDate}
-                  onChange={(e) => setNewTask({...newTask, dueDate: e.target.value})}
-                  className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm text-gray-600 mb-1">תאריך תזכורת (אופציונלי)</label>
-                <input
-                  type="datetime-local"
-                  value={newTask.reminderDate}
-                  onChange={(e) => setNewTask({...newTask, reminderDate: e.target.value})}
-                  className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-            <div className="flex gap-2">
+            {editingTask && (
               <button 
-                type="submit"
-                className="flex-1 bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 transition-colors"
+                type="button"
+                onClick={() => {
+                  setEditingTask(null);
+                  setNewTask({
+                    clientName: '',
+                    task: '',
+                    dueDate: '',
+                    reminderDate: '',
+                    completed: false
+                  });
+                }}
+                className="bg-gray-500 text-white py-2 px-4 rounded-md hover:bg-gray-600 transition-colors"
               >
-                {editingTask ? 'עדכן משימה' : 'הוסף משימה'}
+                בטל עריכה
               </button>
-              {editingTask && (
-                <button 
-                  type="button"
-                  onClick={() => {
-                    setEditingTask(null);
-                    setNewTask({
-                      clientName: '',
-                      task: '',
-                      dueDate: '',
-                      reminderDate: '',
-                      completed: false
-                    });
-                  }}
-                  className="bg-gray-500 text-white py-2 px-4 rounded-md hover:bg-gray-600 transition-colors"
-                >
-                  בטל עריכה
-                </button>
-              )}
-            </div>
-          </form>
-        </div>
-  
-        {/* חיפוש וסינון */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex flex-col md:flex-row gap-4 items-center">
-            <div className="flex-1">
-              <input
-                type="text"
-                placeholder="חיפוש לפי לקוח או משימה..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setFilterStatus('all')}
-                className={`px-4 py-2 rounded-md ${
-                  filterStatus === 'all' 
-                    ? 'bg-blue-500 text-white' 
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                הכל
-              </button>
-              <button
-                onClick={() => setFilterStatus('active')}
-                className={`px-4 py-2 rounded-md ${
-                  filterStatus === 'active' 
-                    ? 'bg-blue-500 text-white' 
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                פעילות
-              </button>
-              <button
-                onClick={() => setFilterStatus('completed')}
-                className={`px-4 py-2 rounded-md ${
-                  filterStatus === 'completed' 
-                    ? 'bg-blue-500 text-white' 
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                הושלמו
-              </button>
-            </div>
+            )}
           </div>
-        </div>
-  
-        {/* טבלת משימות */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-bold mb-4">רשימת משימות</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">סטטוס</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">לקוח</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">משימה</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">תאריך יעד</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">תזכורת</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">פעולות</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredAndSearchedTasks.map((task, index) => (
-                  <tr 
-                    key={task.id} 
-                    className={`
-                      ${index % 2 === 0 ? 'bg-white' : 'bg-blue-50'}
-                      ${task.completed ? 'bg-gray-100' : ''}
-                      hover:bg-gray-50 transition-colors border-b border-gray-200
-                    `}
-                  >
-                    <td className="px-6 py-4">
-                      <input
-                        type="checkbox"
-                        checked={task.completed}
-                        onChange={() => handleTaskCompletion(task.id)}
-                        className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                      />
-                    </td>
-                    <td className="px-6 py-4 font-bold">{task.clientName}</td>
-                    <td className="px-6 py-4">{task.task}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {formatDate(task.dueDate)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {task.reminderDate ? formatDate(task.reminderDate) : '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleEditTask(task)}
-                          className="text-blue-600 hover:text-blue-900"
-                        >
-                          ערוך
-                        </button>
-                        <button
-                          onClick={() => handleDeleteTask(task.id)}
-                          className="text-red-600 hover:text-red-900 mr-4"
-                        >
-                          מחק
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        </form>
+      </div>
+
+      {/* חיפוש וסינון */}
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="flex flex-col md:flex-row gap-4 items-center">
+          <div className="flex-1">
+            <input
+              type="text"
+              placeholder="חיפוש לפי לקוח או משימה..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setFilterStatus('all')}
+              className={`px-4 py-2 rounded-md ${
+                filterStatus === 'all' 
+                  ? 'bg-blue-500 text-white' 
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              הכל
+            </button>
+            <button
+              onClick={() => setFilterStatus('active')}
+              className={`px-4 py-2 rounded-md ${
+                filterStatus === 'active' 
+                  ? 'bg-blue-500 text-white' 
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              פעילות
+            </button>
+            <button
+              onClick={() => setFilterStatus('completed')}
+              className={`px-4 py-2 rounded-md ${
+                filterStatus === 'completed' 
+                  ? 'bg-blue-500 text-white' 
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              הושלמו
+            </button>
           </div>
         </div>
       </div>
-    );
-  };
-  
-  export default TaskManager;
+
+      {/* טבלת משימות */}
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <h2 className="text-xl font-bold mb-4">רשימת משימות</h2>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">סטטוס</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">לקוח</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">משימה</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">תאריך יעד</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">תזכורת</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">פעולות</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredAndSearchedTasks.map((task, index) => (
+                <tr 
+                  key={task.id} 
+                  className={`
+                    ${index % 2 === 0 ? 'bg-white' : 'bg-blue-50'}
+                    ${task.completed ? 'bg-gray-100' : ''}
+                    hover:bg-gray-50 transition-colors
+                  `}
+                >
+                  <td className="px-6 py-4">
+                    <input
+                      type="checkbox"
+                      checked={task.completed}
+                      onChange={() => handleTaskCompletion(task.id)}
+                      className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                    />
+                  </td>
+                  <td className="px-6 py-4 font-bold">{task.clientName}</td>
+                  <td className="px-6 py-4">{task.task}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {formatDate(task.dueDate)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {task.reminderDate ? formatDate(task.reminderDate) : '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleEditTask(task)}
+                        className="text-blue-600 hover:text-blue-900"
+                      >
+                        ערוך
+                      </button>
+                      <button
+                        onClick={() => handleDeleteTask(task.id)}
+                        className="text-red-600 hover:text-red-900 mr-4"
+                      >
+                        מחק
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default TaskManager;
