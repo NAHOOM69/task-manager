@@ -7,7 +7,7 @@ interface Task {
   clientName: string;
   task: string;
   dueDate: string;
-  reminderDate?: string;  // שינוי לאופציונלי
+  reminderDate?: string;  // אופציונלי
   completed: boolean;
   notified?: boolean;
 }
@@ -25,6 +25,15 @@ const formatDate = (dateStr: string) => {
     hour: '2-digit',
     minute: '2-digit',
   }).format(date);
+};
+
+// פונקציה לבקשת הרשאות התראות
+const requestNotificationPermission = async () => {
+  if ('Notification' in window) {
+    const permission = await Notification.requestPermission();
+    return permission === 'granted';
+  }
+  return false;
 };
 
 const StorageManager = {
@@ -65,6 +74,11 @@ const TaskManager: React.FC = () => {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
+  // הגדרת הרשאות התראות בטעינה
+  useEffect(() => {
+    requestNotificationPermission();
+  }, []);
+
   // בדיקת זמינות localStorage
   useEffect(() => {
     try {
@@ -80,71 +94,69 @@ const TaskManager: React.FC = () => {
     StorageManager.saveTasks(tasks);
   }, [tasks]);
 
-  // הגדרת התראות מתוזמנות
+  // מערכת התראות
   useEffect(() => {
     const checkReminders = () => {
-      const now = new Date();
+      const now = new Date().getTime();
+      
       tasks.forEach(task => {
         if (!task.completed) {
-          // בדיקת תאריך יעד
-          const dueTime = new Date(task.dueDate);
-          if (Math.abs(now.getTime() - dueTime.getTime()) < 60000 && !task.notified) {
-            if (Notification.permission === 'granted') {
-              new Notification('הגיע מועד המשימה!', {
+          const dueTime = new Date(task.dueDate).getTime();
+          
+          // בדיקת זמן יעד
+          if (Math.abs(now - dueTime) < 30000 && !task.notified) {  // 30 שניות
+            console.log('Sending due date notification for task:', task.task);
+            new Notification('הגיע מועד המשימה!', {
+              body: `משימה: ${task.task}\nלקוח: ${task.clientName}`,
+              icon: '/icons/icon-192x192.png'
+            });
+
+            setTasks(prev => prev.map(t => 
+              t.id === task.id ? { ...t, notified: true } : t
+            ));
+          }
+
+          // בדיקת זמן תזכורת
+          if (task.reminderDate) {
+            const reminderTime = new Date(task.reminderDate).getTime();
+            if (Math.abs(now - reminderTime) < 30000 && !task.notified) {
+              console.log('Sending reminder notification for task:', task.task);
+              new Notification('תזכורת למשימה', {
                 body: `משימה: ${task.task}\nלקוח: ${task.clientName}`,
                 icon: '/icons/icon-192x192.png'
               });
+
               setTasks(prev => prev.map(t => 
                 t.id === task.id ? { ...t, notified: true } : t
               ));
-            }
-          }
-
-          // בדיקת תזכורת (אם קיימת)
-          if (task.reminderDate) {
-            const reminderTime = new Date(task.reminderDate);
-            if (Math.abs(now.getTime() - reminderTime.getTime()) < 60000 && !task.notified) {
-              if (Notification.permission === 'granted') {
-                new Notification('תזכורת למשימה', {
-                  body: `משימה: ${task.task}\nלקוח: ${task.clientName}`,
-                  icon: '/icons/icon-192x192.png'
-                });
-                setTasks(prev => prev.map(t => 
-                  t.id === task.id ? { ...t, notified: true } : t
-                ));
-              }
             }
           }
         }
       });
     };
 
-    // בדיקה כל 30 שניות במקום כל דקה
-    const interval = setInterval(checkReminders, 30000);
+    const interval = setInterval(checkReminders, 10000); // בדיקה כל 10 שניות
     return () => clearInterval(interval);
   }, [tasks]);
 
+  // טיפול בהגשת הטופס
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    
     if (editingTask) {
       setTasks(tasks.map(task => 
         task.id === editingTask.id ? { ...newTask, id: task.id, notified: task.notified } : task
       ));
       setEditingTask(null);
+      alert('המשימה עודכנה בהצלחה!');
     } else {
       const taskWithId = { 
         ...newTask, 
         id: Date.now(), 
         notified: false 
       };
-      setTasks([...tasks, taskWithId]);
-
-      if (Notification.permission === 'granted') {
-        new Notification('משימה חדשה נוספה', {
-          body: `משימה: ${taskWithId.task}\nלקוח: ${taskWithId.clientName}`,
-          icon: '/icons/icon-192x192.png'
-        });
-      }
+      setTasks(prevTasks => [...prevTasks, taskWithId]);
+      alert('המשימה נוספה בהצלחה!');
     }
 
     // איפוס הטופס
@@ -159,6 +171,12 @@ const TaskManager: React.FC = () => {
     // איפוס הערכים בשדות הטופס
     const form = e.target as HTMLFormElement;
     form.reset();
+    
+    // איפוס ידני של שדות התאריך
+    const dateInputs = form.querySelectorAll('input[type="datetime-local"]');
+    dateInputs.forEach((input: HTMLInputElement) => {
+      input.value = '';
+    });
   };
 
   const handleEditTask = (task: Task) => {
@@ -379,8 +397,8 @@ const TaskManager: React.FC = () => {
           <h2 className="text-xl font-bold mb-4">רשימת משימות</h2>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr className="border-b border-gray-200">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">סטטוס</th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">לקוח</th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">משימה</th>
@@ -389,9 +407,16 @@ const TaskManager: React.FC = () => {
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">פעולות</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredAndSearchedTasks.map((task) => (
-                  <tr key={task.id} className={task.completed ? "bg-gray-50" : "bg-white"}>
+              <tbody>
+                {filteredAndSearchedTasks.map((task, index) => (
+                  <tr 
+                    key={task.id} 
+                    className={`
+                      ${index % 2 === 0 ? 'bg-white' : 'bg-blue-50'}
+                      ${task.completed ? 'bg-gray-100' : ''}
+                      hover:bg-gray-50 transition-colors border-b border-gray-200
+                    `}
+                  >
                     <td className="px-6 py-4">
                       <input
                         type="checkbox"
@@ -400,7 +425,7 @@ const TaskManager: React.FC = () => {
                         className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                       />
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap font-bold">{task.clientName}</td>
+                    <td className="px-6 py-4 font-bold">{task.clientName}</td>
                     <td className="px-6 py-4">{task.task}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {formatDate(task.dueDate)}
