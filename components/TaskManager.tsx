@@ -168,9 +168,11 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     const form = e.target as HTMLFormElement;
     form.reset();
     const dateInputs = form.querySelectorAll('input[type="datetime-local"]');
-    dateInputs.forEach((input: HTMLInputElement) => {
-      input.value = '';
-    });
+dateInputs.forEach((input) => {
+  if (input instanceof HTMLInputElement) {
+    input.value = '';
+  }
+});
 
   } catch (error) {
     console.error('שגיאה בשמירת המשימה:', error);
