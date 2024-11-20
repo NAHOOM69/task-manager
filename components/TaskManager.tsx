@@ -246,10 +246,10 @@ const TaskManager: React.FC = () => {
     )
     .sort((a, b) => {
       if (a.completed === b.completed) {
-        return new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime();
+        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
       }
       return a.completed ? 1 : -1;
-    });
+    })
 
   return (
     <div className="container mx-auto p-4 space-y-6" dir="rtl">
