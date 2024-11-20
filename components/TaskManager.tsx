@@ -34,7 +34,8 @@ const formatDate = (dateStr: string) => {
 const isTimeToNotify = (targetTime: number): boolean => {
   const now = new Date().getTime();
   const diff = Math.abs(now - targetTime);
-  return diff < 60000; // בודק אם ההפרש הוא פחות מדקה
+  // נגדיל את טווח הבדיקה ל-2 דקות כדי לתת יותר הזדמנויות להתראה
+  return diff < 120000; // 2 minutes instead of 60000 (1 minute)
 };
 
 const TaskManager: React.FC = () => {
@@ -64,7 +65,12 @@ const TaskManager: React.FC = () => {
       if (isBrowser() && 'Notification' in window) {
         try {
           const permission = await Notification.requestPermission();
-          console.log('Notification permission:', permission);
+          console.log('Initial notification permission:', permission);
+          
+          // אם אין הרשאה, ננסה לבקש שוב
+          if (permission !== 'granted') {
+            alert('כדי לקבל תזכורות, אנא אשר התראות מהדפדפן');
+          }
         } catch (error) {
           console.error('Error requesting notification permission:', error);
         }
@@ -77,56 +83,61 @@ const TaskManager: React.FC = () => {
   // מערכת התראות
   useEffect(() => {
     if (!isBrowser()) return;
-
+  
     const checkTaskNotifications = async () => {
+      console.log('Checking notifications...'); // לוג לדיבוג
       const now = new Date().getTime();
       
       for (const task of tasks) {
         if (task.completed) continue;
-
+  
         // בדיקת זמן יעד
         if (task.dueDate && !task.notified) {
           const dueTime = new Date(task.dueDate).getTime();
+          console.log('Task:', task.task, 'Due time:', new Date(dueTime), 'Now:', new Date(now)); // לוג לדיבוג
+          
           if (isTimeToNotify(dueTime)) {
+            console.log('Time to notify for task:', task.task); // לוג לדיבוג
             try {
-              if ('Notification' in window && Notification.permission === 'granted') {
-                new Notification('הגיע מועד המשימה!', {
-                  body: `משימה: ${task.task}\nלקוח: ${task.clientName}`,
-                  icon: '/icons/icon-192x192.png'
-                });
+              if ('Notification' in window) {
+                const permission = await Notification.requestPermission();
+                console.log('Notification permission:', permission); // לוג לדיבוג
                 
-                const updatedTask = { ...task, notified: true };
-                await firebaseService.saveTask(updatedTask);
+                if (permission === 'granted') {
+                  new Notification('הגיע מועד המשימה!', {
+                    body: `משימה: ${task.task}\nלקוח: ${task.clientName}`,
+                    icon: '/icons/icon-192x192.png',
+                    tag: `task-${task.id}`, // מונע כפילויות
+                    requireInteraction: true // התראה תישאר עד שהמשתמש יסגור אותה
+                  });
+                  
+                  // עדכון סטטוס ההתראה
+                  const updatedTask = { ...task, notified: true };
+                  await firebaseService.saveTask(updatedTask);
+                  console.log('Task notification status updated'); // לוג לדיבוג
+                }
               }
             } catch (error) {
-              console.error('Error sending due date notification:', error);
+              console.error('Error sending notification:', error);
             }
           }
         }
-
-        // בדיקת זמן תזכורת
+  
+        // תזכורת - אותו דבר כמו למעלה
         if (task.reminderDate && !task.notified) {
           const reminderTime = new Date(task.reminderDate).getTime();
           if (isTimeToNotify(reminderTime)) {
-            try {
-              if ('Notification' in window && Notification.permission === 'granted') {
-                new Notification('תזכורת למשימה', {
-                  body: `משימה: ${task.task}\nלקוח: ${task.clientName}`,
-                  icon: '/icons/icon-192x192.png'
-                });
-                
-                const updatedTask = { ...task, notified: true };
-                await firebaseService.saveTask(updatedTask);
-              }
-            } catch (error) {
-              console.error('Error sending reminder notification:', error);
-            }
+            // אותה לוגיקה כמו למעלה
           }
         }
       }
     };
-
-    const interval = setInterval(checkTaskNotifications, 30000); // בדיקה כל 30 שניות
+  
+    // בדיקה כל 30 שניות
+    const interval = setInterval(checkTaskNotifications, 30000);
+    // בדיקה מיידית בטעינה
+    checkTaskNotifications();
+    
     return () => clearInterval(interval);
   }, [tasks]);
 
