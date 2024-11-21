@@ -137,7 +137,7 @@ const sendNotification = async (task: Task, message: string) => {
     if ('Notification' in window && Notification.permission === 'granted') {
       new Notification(message, {
         body: `משימה: ${task.task}\nלקוח: ${task.clientName}`,
-        icon: './public/icons/icon-192x192.png', // פסיק תקין בסוף השורה
+        icon: './icons/icon-192x192.png', // פסיק תקין בסוף השורה
         tag: `task-${task.id}`, // מונע התראות כפולות
         requireInteraction: true, // השארת ההתראה עד סגירתה
       });
