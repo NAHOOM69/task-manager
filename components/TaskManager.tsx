@@ -52,6 +52,21 @@ const TaskManager: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
 
+  // פונקציה לטיפול בעריכת משימה
+  const handleEditTask = (task: Task) => {
+    setEditingTask(task);
+    setNewTask({
+      clientName: task.clientName,
+      task: task.task,
+      dueDate: task.dueDate,
+      reminderDate: task.reminderDate || '',
+      completed: task.completed,
+    });
+  };
+
+  // שאר הפונקציות (handleSubmit, handleDeleteTask וכו') יופיעו כאן
+
+
   // האזנה לשינויים בנתונים מ-Firebase
   useEffect(() => {
     const unsubscribe = firebaseService.onTasksChange((updatedTasks) => {
