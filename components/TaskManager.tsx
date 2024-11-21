@@ -137,7 +137,7 @@ const TaskManager: React.FC = () => {
       if ('Notification' in window && Notification.permission === 'granted') {
         new Notification(message, {
           body: `משימה: ${task.task}\nלקוח: ${task.clientName}`,
-          icon: '/icons/icon-192x192.png',
+          icon: './public/icons/icon-192x192.png'
           tag: `task-${task.id}`, // מונע התראות כפולות
           requireInteraction: true,
         });
