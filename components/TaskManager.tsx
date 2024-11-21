@@ -131,21 +131,27 @@ const TaskManager: React.FC = () => {
     return () => clearInterval(interval);
   }, [tasks]);
 
- // שליחת התראה
+// שליחת התראה
 const sendNotification = async (task: Task, message: string) => {
   try {
     if ('Notification' in window && Notification.permission === 'granted') {
       new Notification(message, {
         body: `משימה: ${task.task}\nלקוח: ${task.clientName}`,
-        icon: './icons/icon-192x192.png', // פסיק תקין בסוף השורה
+        icon: './public/icons/icon-192x192.png', // פסיק תקין בסוף השורה
         tag: `task-${task.id}`, // מונע התראות כפולות
         requireInteraction: true, // השארת ההתראה עד סגירתה
       });
+
+      // עדכון סטטוס ההתראה בפיירבייס
+      const updatedTask = { ...task, notified: true };
+      await firebaseService.saveTask(updatedTask);
+      console.log('Task notification status updated.');
     }
   } catch (error) {
     console.error('Error in sendNotification:', error);
   }
 };
+
 
         // עדכון סטטוס
         const updatedTask = { ...task, notified: true };
