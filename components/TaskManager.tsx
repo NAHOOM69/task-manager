@@ -1,8 +1,9 @@
 'use client';
-import React, { useEffect, useState } from 'react';
-import { firebaseService } from '@/lib/firebase';
 
-// ממשק לייצוג משימה
+import React, { useEffect, useState } from 'react';
+import { firebaseService } from '../lib/firebase'; // ייבוא השירות מ-Firebase
+
+// ממשק המגדיר את מבנה המשימה
 interface Task {
   id: number;
   clientName: string;
@@ -10,220 +11,152 @@ interface Task {
   dueDate: string;
   reminderDate?: string;
   completed: boolean;
-  notified?: boolean;
 }
 
-// ממשק למשימה חדשה
-type NewTask = Omit<Task, 'id' | 'notified'>;
-
-// סטטוס סינון
-type FilterStatus = 'all' | 'active' | 'completed';
-
 const TaskManager: React.FC = () => {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [newTask, setNewTask] = useState<NewTask>({
+  const [tasks, setTasks] = useState<Task[]>([]); // מצב המשימות
+  const [filter, setFilter] = useState<'all' | 'completed' | 'active'>('all'); // מסנן התצוגה
+  const [newTask, setNewTask] = useState<Partial<Task>>({
     clientName: '',
     taskName: '',
     dueDate: '',
     reminderDate: '',
     completed: false,
-  });
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
-  const [searchTerm, setSearchTerm] = useState<string>('');
-
-  // האזנה לשינויים ב-Firebase
+  }); // משימה חדשה
   useEffect(() => {
+    // האזנה לשינויים במשימות בזמן אמת
     const unsubscribe = firebaseService.onTasksChange((updatedTasks) => {
-      const sortedTasks = updatedTasks.sort((a, b) => {
-        if (a.completed !== b.completed) return a.completed ? 1 : -1;
-        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-      });
-      setTasks(sortedTasks);
+      setTasks(updatedTasks);
     });
 
-    return () => unsubscribe();
+    return () => unsubscribe(); // ביטול ההאזנה כאשר הקומפוננטה מסיימת את הפעולה
   }, []);
-
   // הוספת משימה חדשה
   const handleAddTask = async () => {
     if (!newTask.clientName || !newTask.taskName || !newTask.dueDate) {
-      alert('יש למלא את כל השדות הדרושים.');
+      alert('יש למלא את כל השדות הנדרשים');
       return;
     }
-    const task: Task = {
-      id: Date.now(),
-      ...newTask,
-      completed: false,
-      notified: false,
-    };
-    await firebaseService.saveTask(task);
-    resetForm();
-  };
 
-  // עריכת משימה
-  const handleEditTask = (task: Task) => {
-    setEditingTask(task);
-    setNewTask({
-      clientName: task.clientName,
-      taskName: task.taskName,
-      dueDate: task.dueDate,
-      reminderDate: task.reminderDate || '',
-      completed: task.completed,
-    });
-  };
+    const taskId = Date.now(); // יצירת מזהה ייחודי מבוסס זמן
+    const task = { ...newTask, id: taskId };
 
-  // שמירת משימה לאחר עריכה
-  const handleSaveEdit = async () => {
-    if (editingTask) {
-      const updatedTask = {
-        ...editingTask,
-        ...newTask,
-      };
-      await firebaseService.saveTask(updatedTask);
-      setEditingTask(null);
-      resetForm();
-    }
+    await firebaseService.saveTask(task); // שמירת המשימה ב-Firebase
+    setNewTask({ clientName: '', taskName: '', dueDate: '', reminderDate: '', completed: false }); // איפוס השדות
   };
 
   // מחיקת משימה
-  const handleDeleteTask = async (taskId: number) => {
-    if (confirm('האם אתה בטוח שברצונך למחוק משימה זו?')) {
-      await firebaseService.deleteTask(taskId);
-    }
+  const handleDeleteTask = async (id: number) => {
+    await firebaseService.deleteTask(id);
   };
 
-  // שינוי סטטוס המשימה (השלמה/לא הושלמה)
-  const handleToggleCompletion = async (task: Task) => {
-    const updatedTask = { ...task, completed: !task.completed };
-    await firebaseService.saveTask(updatedTask);
+  // שינוי סטטוס משימה (הושלמה או פעילה)
+  const handleToggleComplete = async (id: number, completed: boolean) => {
+    await firebaseService.updateTaskStatus(id, completed);
   };
 
-  // איפוס הטופס
-  const resetForm = () => {
-    setNewTask({
-      clientName: '',
-      taskName: '',
-      dueDate: '',
-      reminderDate: '',
-      completed: false,
-    });
-    setEditingTask(null);
-  };
-
+  // סינון המשימות להצגה בטבלה
+  const filteredTasks = tasks.filter((task) => {
+    if (filter === 'all') return true;
+    return filter === 'completed' ? task.completed : !task.completed;
+  });
   return (
-    <div className="container mx-auto p-4 space-y-6" dir="rtl">
-      <h1 className="text-2xl font-bold mb-4">מנהל משימות</h1>
+    <div className="p-4">
+      <h1 className="text-xl font-bold mb-4">מנהל משימות</h1>
 
-      {/* טופס הוספת/עריכת משימה */}
-      <div className="bg-white p-6 rounded shadow">
-        <h2 className="text-xl font-bold mb-4">
-          {editingTask ? 'עריכת משימה' : 'הוספת משימה חדשה'}
-        </h2>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            editingTask ? handleSaveEdit() : handleAddTask();
-          }}
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <input
-              type="text"
-              placeholder="שם לקוח"
-              value={newTask.clientName}
-              onChange={(e) => setNewTask({ ...newTask, clientName: e.target.value })}
-              className="input-field"
-              required
-            />
-            <input
-              type="text"
-              placeholder="שם משימה"
-              value={newTask.taskName}
-              onChange={(e) => setNewTask({ ...newTask, taskName: e.target.value })}
-              className="input-field"
-              required
-            />
-            <input
-              type="datetime-local"
-              value={newTask.dueDate}
-              onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })}
-              className="input-field"
-              required
-            />
-            <input
-              type="datetime-local"
-              value={newTask.reminderDate}
-              onChange={(e) => setNewTask({ ...newTask, reminderDate: e.target.value })}
-              className="input-field"
-            />
-          </div>
-          <button type="submit" className="btn-primary mt-4">
-            {editingTask ? 'שמור שינויים' : 'הוסף משימה'}
-          </button>
-        </form>
-      </div>
-
-      {/* חיפוש וסינון */}
-      <div className="flex items-center gap-4 bg-white p-4 rounded shadow">
+      {/* טופס הוספת משימה */}
+      <div className="mb-4">
         <input
           type="text"
-          placeholder="חפש משימה..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="input-field"
+          placeholder="שם לקוח"
+          value={newTask.clientName}
+          onChange={(e) => setNewTask({ ...newTask, clientName: e.target.value })}
+          className="border rounded p-2 mr-2"
         />
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value as FilterStatus)}
-          className="select-field"
-        >
-          <option value="all">הכל</option>
-          <option value="active">פעילות</option>
-          <option value="completed">הושלמו</option>
-        </select>
+        <input
+          type="text"
+          placeholder="שם משימה"
+          value={newTask.taskName}
+          onChange={(e) => setNewTask({ ...newTask, taskName: e.target.value })}
+          className="border rounded p-2 mr-2"
+        />
+        <input
+          type="date"
+          value={newTask.dueDate}
+          onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })}
+          className="border rounded p-2 mr-2"
+        />
+        <input
+          type="datetime-local"
+          value={newTask.reminderDate}
+          onChange={(e) => setNewTask({ ...newTask, reminderDate: e.target.value })}
+          className="border rounded p-2 mr-2"
+        />
+        <button onClick={handleAddTask} className="bg-blue-500 text-white p-2 rounded">
+          הוסף משימה
+        </button>
       </div>
 
-      {/* טבלת משימות */}
-      <table className="w-full text-right bg-white rounded shadow">
-        <thead className="bg-gray-200">
-          <tr>
-            <th>סטטוס</th>
-            <th>לקוח</th>
-            <th>משימה</th>
-            <th>תאריך יעד</th>
-            <th>תזכורת</th>
-            <th>פעולות</th>
+      {/* אפשרויות סינון */}
+      <div className="mb-4">
+        <button
+          onClick={() => setFilter('all')}
+          className={`p-2 rounded ${filter === 'all' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+        >
+          כל המשימות
+        </button>
+        <button
+          onClick={() => setFilter('active')}
+          className={`p-2 rounded ml-2 ${
+            filter === 'active' ? 'bg-blue-500 text-white' : 'bg-gray-200'
+          }`}
+        >
+          משימות פעילות
+        </button>
+        <button
+          onClick={() => setFilter('completed')}
+          className={`p-2 rounded ml-2 ${
+            filter === 'completed' ? 'bg-blue-500 text-white' : 'bg-gray-200'
+          }`}
+        >
+          משימות שהושלמו
+        </button>
+      </div>
+      <table className="min-w-full table-auto border-collapse border border-gray-200">
+        <thead>
+          <tr className="bg-gray-100">
+            <th className="border border-gray-200 p-2">סטטוס</th>
+            <th className="border border-gray-200 p-2">לקוח</th>
+            <th className="border border-gray-200 p-2">משימה</th>
+            <th className="border border-gray-200 p-2">תאריך יעד</th>
+            <th className="border border-gray-200 p-2">תזכורת</th>
+            <th className="border border-gray-200 p-2">פעולות</th>
           </tr>
         </thead>
         <tbody>
-          {tasks
-            .filter((task) => {
-              if (filterStatus === 'completed') return task.completed;
-              if (filterStatus === 'active') return !task.completed;
-              return true;
-            })
-            .filter((task) =>
-              task.clientName.includes(searchTerm) || task.taskName.includes(searchTerm)
-            )
-            .map((task) => (
-              <tr key={task.id} className={task.completed ? 'bg-green-100' : 'bg-white'}>
-                <td>
-                  <input
-                    type="checkbox"
-                    checked={task.completed}
-                    onChange={() => handleToggleCompletion(task)}
-                  />
-                </td>
-                <td>{task.clientName}</td>
-                <td>{task.taskName}</td>
-                <td>{task.dueDate}</td>
-                <td>{task.reminderDate || '-'}</td>
-                <td>
-                  <button onClick={() => handleEditTask(task)}>ערוך</button>
-                  <button onClick={() => handleDeleteTask(task.id)}>מחק</button>
-                </td>
-              </tr>
-            ))}
+          {filteredTasks.map((task, index) => (
+            <tr key={task.id} className={index % 2 === 0 ? 'bg-blue-50' : 'bg-white'}>
+              <td className="border border-gray-200 p-2 text-center">
+                <input
+                  type="checkbox"
+                  checked={task.completed}
+                  onChange={() => handleToggleComplete(task.id, !task.completed)}
+                />
+              </td>
+              <td className="border border-gray-200 p-2">{task.clientName}</td>
+              <td className="border border-gray-200 p-2">{task.taskName}</td>
+              <td className="border border-gray-200 p-2">{task.dueDate}</td>
+              <td className="border border-gray-200 p-2">{task.reminderDate || 'אין'}</td>
+              <td className="border border-gray-200 p-2 text-center">
+                <button
+                  onClick={() => handleDeleteTask(task.id)}
+                  className="bg-red-500 text-white p-2 rounded"
+                >
+                  מחק
+                </button>
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>
