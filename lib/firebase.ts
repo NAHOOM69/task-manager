@@ -1,99 +1,38 @@
-import { initializeApp } from 'firebase/app';
-import { getDatabase, ref, set, onValue, remove, Database } from 'firebase/database';
-import { Task } from '../types/task';
+// Import the functions you need from the SDKs
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+import { getMessaging } from "firebase/messaging"; // הוספת Messaging
+import { getDatabase } from "firebase/database"; // הוספת Database (אם צריך)
 
+// Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyAPB7BtGlY2-7m5TaIpoz4duC1Yv7IEGNU",
-  authDomain: "task-manager181124.firebaseapp.com",
-  databaseURL: "https://task-manager181124-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "task-manager181124",
-  storageBucket: "task-manager181124.firebasestorage.app",
-  messagingSenderId: "212734040741",
-  appId: "1:212734040741:web:fc416a1ff480bb255d0b4c",
-  measurementId: "G-ED32K3SGXQ"
+  apiKey: "AIzaSyDW-osvniH7Q5qG-DnH69TJHE_kdzHDfjA",
+  authDomain: "task-manager211124.firebaseapp.com",
+  projectId: "task-manager211124",
+  storageBucket: "task-manager211124.firebasestorage.app",
+  messagingSenderId: "1090043201443",
+  appId: "1:1090043201443:web:478e66399f3dbcf0ab3c16",
+  measurementId: "G-8J9LQ6ZRGD"
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const database = getDatabase(app);
+const analytics = getAnalytics(app); // Analytics (אם תרצה להשתמש בזה)
+const messaging = getMessaging(app); // Cloud Messaging
+const database = getDatabase(app); // Real-time Database
 
-export class FirebaseService {
-  private db: Database;
-  private tasksRef: string = 'tasks';
-
-  constructor() {
-    this.db = database;
-  }
-
-  // הוספה או עדכון של משימה
-  async saveTask(task: Task): Promise<void> {
-    try {
-      await set(ref(this.db, `${this.tasksRef}/${task.id}`), task);
-    } catch (error) {
-      console.error('Error saving task:', error);
-      throw error;
-    }
-  }
-
-  // מחיקת משימה
-  async deleteTask(taskId: number): Promise<void> {
-    try {
-      await remove(ref(this.db, `${this.tasksRef}/${taskId}`));
-    } catch (error) {
-      console.error('Error deleting task:', error);
-      throw error;
-    }
-  }
-
-  // האזנה לשינויים במשימות
-  onTasksChange(callback: (tasks: Task[]) => void): () => void {
-    const tasksRef = ref(this.db, this.tasksRef);
-    const unsubscribe = onValue(tasksRef, (snapshot) => {
-      const data = snapshot.val();
-      const tasks: Task[] = data ? Object.values(data) : [];
-      callback(tasks.sort((a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime()));
+// פונקציה לבקשת הרשאות וקבלת טוקן של Firebase Cloud Messaging
+export const requestNotificationPermission = async (): Promise<string | null> => {
+  try {
+    const token = await getMessaging().getToken({
+      vapidKey: "BAi6iS6NtZopagHTG5wa0AQVDIcWxlM6ph28Y_PeRxP_rVqij3mNGqsdr3VAaApRvo3JZSNyjziBEaEt2uKrORs" // החלף ב-VAPID Key שקיבלת ב-Firebase Console
     });
-
-    return () => unsubscribe();
+    console.log("FCM Token:", token);
+    return token;
+  } catch (error) {
+    console.error("Error getting FCM token:", error);
+    return null;
   }
+};
 
-  // שמירת כל המשימות
-  async saveAllTasks(tasks: Task[]): Promise<void> {
-    try {
-      const tasksObject = tasks.reduce((acc, task) => {
-        acc[task.id] = task;
-        return acc;
-      }, {} as { [key: string]: Task });
-
-      await set(ref(this.db, this.tasksRef), tasksObject);
-    } catch (error) {
-      console.error('Error saving all tasks:', error);
-      throw error;
-    }
-  }
-
-  // עדכון סטטוס משימה
-  async updateTaskStatus(taskId: number, completed: boolean): Promise<void> {
-    try {
-      const taskRef = ref(this.db, `${this.tasksRef}/${taskId}/completed`);
-      await set(taskRef, completed);
-    } catch (error) {
-      console.error('Error updating task status:', error);
-      throw error;
-    }
-  }
-
-  // עדכון סטטוס התראה
-  async updateNotificationStatus(taskId: number, notified: boolean): Promise<void> {
-    try {
-      const taskRef = ref(this.db, `${this.tasksRef}/${taskId}/notified`);
-      await set(taskRef, notified);
-    } catch (error) {
-      console.error('Error updating notification status:', error);
-      throw error;
-    }
-  }
-}
-
-// יצירת מופע יחיד של השירות
-export const firebaseService = new FirebaseService();
+export { app, messaging, database, analytics };

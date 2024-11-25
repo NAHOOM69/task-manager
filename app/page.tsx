@@ -2,63 +2,34 @@
 
 import { useEffect } from 'react';
 import TaskManager from '@/components/TaskManager';
+import { requestNotificationPermission } from '@/lib/firebase';
 
 export default function Home() {
   useEffect(() => {
-    // רישום Service Worker רק בסביבת production
-    if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
-      window.addEventListener('load', function() {
-        navigator.serviceWorker
-          .register('/sw.js')
-          .then((registration) => {
-            console.log('PWA - Service Worker registered successfully:', registration.scope);
-          })
-          .catch((error) => {
-            console.log('PWA - Service Worker registration failed:', error);
-          });
-      });
+    // רישום ה-Service Worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker
+        .register('/firebase-messaging-sw.js')
+        .then((registration) => {
+          console.log('Service Worker registered successfully:', registration.scope);
+        })
+        .catch((error) => {
+          console.error('Service Worker registration failed:', error);
+        });
     }
   }, []);
 
-  // מאפשר לבקש הרשאות התראות
-  const requestNotificationPermission = async () => {
-    if ('Notification' in window) {
-      try {
-        const permission = await Notification.requestPermission();
-        if (permission === 'granted') {
-          console.log('Notification permission granted!');
-        }
-      } catch (error) {
-        console.error('Error requesting notification permission:', error);
+  useEffect(() => {
+    // בקשת הרשאות להתראות
+    const getPermission = async () => {
+      const token = await requestNotificationPermission();
+      if (token) {
+        console.log('FCM Token acquired:', token);
+        // תוכל לשמור את הטוקן בשרת אם צריך
       }
-    }
-  };
+    };
 
-  useEffect(() => {
-    // בקשת הרשאות התראות בטעינה ראשונית
-    requestNotificationPermission();
-  }, []);
-
-  // מוסיף prompt להתקנת האפליקציה
-  useEffect(() => {
-    let deferredPrompt: any;
-
-    window.addEventListener('beforeinstallprompt', (e) => {
-      // מונע את הופעת ההודעה האוטומטית
-      e.preventDefault();
-      // שומר את האירוע כדי להשתמש בו מאוחר יותר
-      deferredPrompt = e;
-    });
-
-    // אם נרצה להוסיף כפתור התקנה מותאם אישית
-    // const installApp = async () => {
-    //   if (deferredPrompt) {
-    //     deferredPrompt.prompt();
-    //     const { outcome } = await deferredPrompt.userChoice;
-    //     console.log(`User response to the install prompt: ${outcome}`);
-    //     deferredPrompt = null;
-    //   }
-    // };
+    getPermission();
   }, []);
 
   return (
