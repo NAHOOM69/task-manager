@@ -2,14 +2,14 @@
 
 import { useEffect } from 'react';
 import TaskManager from '@/components/TaskManager';
-import { requestNotificationPermission } from '@/lib/firebase';
+import { firebaseService } from '@/lib/firebase';
 
 export default function Home() {
   useEffect(() => {
     const initNotifications = async () => {
       if (typeof window !== 'undefined') {
         try {
-          const token = await requestNotificationPermission();
+          const token = await firebaseService.requestNotificationPermission();
           if (token) {
             console.log("Notification token received:", token);
           } else {
