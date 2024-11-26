@@ -79,17 +79,6 @@ const TaskManager: React.FC = () => {
     }
   };
 
-  // ... שאר הקוד נשאר זהה
-
-  return (
-    <div className="p-4">
-      {/* ... שאר הקוד נשאר זהה */}
-    </div>
-  );
-};
-
-export default TaskManager;
-
   const handleAddTask = async () => {
     if (!newTask.clientName || !newTask.taskName || !newTask.dueDate) {
       alert('יש למלא את כל השדות הנדרשים');
@@ -100,22 +89,6 @@ export default TaskManager;
     const task = { ...newTask, id: taskId } as Task;
 
     await firebaseService.saveTask(task);
-    
-    if (task.reminderDate) {
-      const reminderDate = new Date(task.reminderDate);
-      const now = new Date();
-      const timeUntilReminder = reminderDate.getTime() - now.getTime();
-      
-      if (timeUntilReminder > 0) {
-        setTimeout(() => {
-          showNotification(
-            'תזכורת למשימה',
-            `תזכורת: המשימה "${task.taskName}" עבור ${task.clientName}`
-          );
-        }, timeUntilReminder);
-      }
-    }
-
     setNewTask({
       clientName: '',
       taskName: '',
