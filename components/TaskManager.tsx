@@ -1,9 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { firebaseService } from '../lib/firebase'; // ייבוא השירות מ-Firebase
+import { firebaseService } from '../lib/firebase';
 
-// ממשק המגדיר את מבנה המשימה
 interface Task {
   id: number;
   clientName: string;
@@ -14,57 +13,131 @@ interface Task {
 }
 
 const TaskManager: React.FC = () => {
-  const [tasks, setTasks] = useState<Task[]>([]); // מצב המשימות
-  const [filter, setFilter] = useState<'all' | 'completed' | 'active'>('all'); // מסנן התצוגה
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [filter, setFilter] = useState<'all' | 'completed' | 'active'>('all');
   const [newTask, setNewTask] = useState<Partial<Task>>({
     clientName: '',
     taskName: '',
     dueDate: '',
     reminderDate: '',
     completed: false,
-  }); // משימה חדשה
+  });
+
   useEffect(() => {
-    // האזנה לשינויים במשימות בזמן אמת
+    const setupNotifications = async () => {
+      if ('Notification' in window) {
+        const permission = await Notification.requestPermission();
+        console.log('Notification permission:', permission);
+      }
+    };
+    
+    setupNotifications();
+    
     const unsubscribe = firebaseService.onTasksChange((updatedTasks) => {
       setTasks(updatedTasks);
+      checkForDueTasksAndReminders(updatedTasks);
     });
 
-    return () => unsubscribe(); // ביטול ההאזנה כאשר הקומפוננטה מסיימת את הפעולה
+    return () => unsubscribe();
   }, []);
-  // הוספת משימה חדשה
+
+  const checkForDueTasksAndReminders = (taskList: Task[]) => {
+    const now = new Date();
+    taskList.forEach(task => {
+      if (task.completed) return;
+
+      if (task.dueDate) {
+        const dueDate = new Date(task.dueDate);
+        if (dueDate.getTime() - now.getTime() <= 0) {
+          showNotification(
+            'משימה לביצוע',
+            `המשימה "${task.taskName}" עבור ${task.clientName} צריכה להתבצע היום`
+          );
+        }
+      }
+
+      if (task.reminderDate) {
+        const reminderDate = new Date(task.reminderDate);
+        if (reminderDate.getTime() - now.getTime() <= 0) {
+          showNotification(
+            'תזכורת למשימה',
+            `תזכורת: המשימה "${task.taskName}" עבור ${task.clientName}`
+          );
+        }
+      }
+    });
+  };
+
+  const showNotification = (title: string, body: string) => {
+    if (!('Notification' in window)) return;
+    
+    if (Notification.permission === 'granted') {
+      new Notification(title, { 
+        body,
+        icon: '/icons/icon-192x192.png'
+      });
+    }
+  };
+
   const handleAddTask = async () => {
     if (!newTask.clientName || !newTask.taskName || !newTask.dueDate) {
       alert('יש למלא את כל השדות הנדרשים');
       return;
     }
 
-    const taskId = Date.now(); // יצירת מזהה ייחודי מבוסס זמן
-    const task = { ...newTask, id: taskId };
+    const taskId = Date.now();
+    const task = { ...newTask, id: taskId } as Task;
 
-    await firebaseService.saveTask(task); // שמירת המשימה ב-Firebase
-    setNewTask({ clientName: '', taskName: '', dueDate: '', reminderDate: '', completed: false }); // איפוס השדות
+    await firebaseService.saveTask(task);
+    
+    if (task.reminderDate) {
+      const reminderDate = new Date(task.reminderDate);
+      const now = new Date();
+      const timeUntilReminder = reminderDate.getTime() - now.getTime();
+      
+      if (timeUntilReminder > 0) {
+        setTimeout(() => {
+          showNotification(
+            'תזכורת למשימה',
+            `תזכורת: המשימה "${task.taskName}" עבור ${task.clientName}`
+          );
+        }, timeUntilReminder);
+      }
+    }
+
+    setNewTask({
+      clientName: '',
+      taskName: '',
+      dueDate: '',
+      reminderDate: '',
+      completed: false,
+    });
   };
 
-  // מחיקת משימה
   const handleDeleteTask = async (id: number) => {
     await firebaseService.deleteTask(id);
   };
 
-  // שינוי סטטוס משימה (הושלמה או פעילה)
   const handleToggleComplete = async (id: number, completed: boolean) => {
     await firebaseService.updateTaskStatus(id, completed);
   };
 
-  // סינון המשימות להצגה בטבלה
-  const filteredTasks = tasks.filter((task) => {
-    if (filter === 'all') return true;
-    return filter === 'completed' ? task.completed : !task.completed;
-  });
+  const sortedAndFilteredTasks = [...tasks]
+    .sort((a, b) => {
+      if (a.completed !== b.completed) {
+        return a.completed ? 1 : -1;
+      }
+      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+    })
+    .filter((task) => {
+      if (filter === 'all') return true;
+      return filter === 'completed' ? task.completed : !task.completed;
+    });
+
   return (
     <div className="p-4">
       <h1 className="text-xl font-bold mb-4">מנהל משימות</h1>
 
-      {/* טופס הוספת משימה */}
       <div className="mb-4">
         <input
           type="text"
@@ -92,73 +165,94 @@ const TaskManager: React.FC = () => {
           onChange={(e) => setNewTask({ ...newTask, reminderDate: e.target.value })}
           className="border rounded p-2 mr-2"
         />
-        <button onClick={handleAddTask} className="bg-blue-500 text-white p-2 rounded">
+        <button 
+          onClick={handleAddTask}
+          className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 transition-colors"
+        >
           הוסף משימה
         </button>
       </div>
 
-      {/* אפשרויות סינון */}
-      <div className="mb-4">
+      <div className="mb-4 space-x-2 rtl:space-x-reverse">
         <button
           onClick={() => setFilter('all')}
-          className={`p-2 rounded ${filter === 'all' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+          className={`p-2 rounded transition-colors ${
+            filter === 'all' ? 'bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300'
+          }`}
         >
           כל המשימות
         </button>
         <button
           onClick={() => setFilter('active')}
-          className={`p-2 rounded ml-2 ${
-            filter === 'active' ? 'bg-blue-500 text-white' : 'bg-gray-200'
+          className={`p-2 rounded transition-colors ${
+            filter === 'active' ? 'bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300'
           }`}
         >
           משימות פעילות
         </button>
         <button
           onClick={() => setFilter('completed')}
-          className={`p-2 rounded ml-2 ${
-            filter === 'completed' ? 'bg-blue-500 text-white' : 'bg-gray-200'
+          className={`p-2 rounded transition-colors ${
+            filter === 'completed' ? 'bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300'
           }`}
         >
           משימות שהושלמו
         </button>
       </div>
-      <table className="min-w-full table-auto border-collapse border border-gray-200">
-        <thead>
-          <tr className="bg-gray-100">
-            <th className="border border-gray-200 p-2">סטטוס</th>
-            <th className="border border-gray-200 p-2">לקוח</th>
-            <th className="border border-gray-200 p-2">משימה</th>
-            <th className="border border-gray-200 p-2">תאריך יעד</th>
-            <th className="border border-gray-200 p-2">תזכורת</th>
-            <th className="border border-gray-200 p-2">פעולות</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filteredTasks.map((task, index) => (
-            <tr key={task.id} className={index % 2 === 0 ? 'bg-blue-50' : 'bg-white'}>
-              <td className="border border-gray-200 p-2 text-center">
-                <input
-                  type="checkbox"
-                  checked={task.completed}
-                  onChange={() => handleToggleComplete(task.id, !task.completed)}
-                />
-              </td>
-              <td className="border border-gray-200 p-2">{task.clientName}</td>
-              <td className="border border-gray-200 p-2">{task.taskName}</td>
-              <td className="border border-gray-200 p-2">{task.dueDate}</td>
-              <td className="border border-gray-200 p-2">{task.reminderDate || 'אין'}</td>
-              <td className="border border-gray-200 p-2 text-center">
-                <button
-                  onClick={() => handleDeleteTask(task.id)}
-                  className="bg-red-500 text-white p-2 rounded"
-                >
-                  מחק
-                </button>
-              </td>
+
+      <div className="overflow-x-auto">
+        <table className="min-w-full table-auto border-collapse border border-gray-200">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="border border-gray-200 p-2">סטטוס</th>
+              <th className="border border-gray-200 p-2">לקוח</th>
+              <th className="border border-gray-200 p-2">משימה</th>
+              <th className="border border-gray-200 p-2">תאריך יעד</th>
+              <th className="border border-gray-200 p-2">תזכורת</th>
+              <th className="border border-gray-200 p-2">פעולות</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {sortedAndFilteredTasks.map((task, index) => (
+              <tr 
+                key={task.id} 
+                className={`${
+                  index % 2 === 0 ? 'bg-blue-50' : 'bg-white'
+                } ${
+                  task.completed ? 'text-gray-500' : ''
+                }`}
+              >
+                <td className="border border-gray-200 p-2 text-center">
+                  <input
+                    type="checkbox"
+                    checked={task.completed}
+                    onChange={() => handleToggleComplete(task.id, !task.completed)}
+                    className="h-4 w-4 text-blue-600"
+                  />
+                </td>
+                <td className="border border-gray-200 p-2">{task.clientName}</td>
+                <td className="border border-gray-200 p-2">{task.taskName}</td>
+                <td className="border border-gray-200 p-2">
+                  {new Date(task.dueDate).toLocaleDateString('he-IL')}
+                </td>
+                <td className="border border-gray-200 p-2">
+                  {task.reminderDate 
+                    ? new Date(task.reminderDate).toLocaleString('he-IL')
+                    : 'אין'}
+                </td>
+                <td className="border border-gray-200 p-2 text-center">
+                  <button
+                    onClick={() => handleDeleteTask(task.id)}
+                    className="bg-red-500 text-white p-2 rounded hover:bg-red-600 transition-colors"
+                  >
+                    מחק
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };
