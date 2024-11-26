@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { firebaseService } from '../lib/firebase';
 
 interface Task {
@@ -23,25 +23,7 @@ const TaskManager: React.FC = () => {
     completed: false,
   });
 
-  useEffect(() => {
-    const setupNotifications = async () => {
-      if ('Notification' in window) {
-        const permission = await Notification.requestPermission();
-        console.log('Notification permission:', permission);
-      }
-    };
-    
-    setupNotifications();
-    
-    const unsubscribe = firebaseService.onTasksChange((updatedTasks) => {
-      setTasks(updatedTasks);
-      checkForDueTasksAndReminders(updatedTasks);
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  const checkForDueTasksAndReminders = (taskList: Task[]) => {
+  const checkForDueTasksAndReminders = useCallback((taskList: Task[]) => {
     const now = new Date();
     taskList.forEach(task => {
       if (task.completed) return;
@@ -66,7 +48,25 @@ const TaskManager: React.FC = () => {
         }
       }
     });
-  };
+  }, []);
+
+  useEffect(() => {
+    const setupNotifications = async () => {
+      if ('Notification' in window) {
+        const permission = await Notification.requestPermission();
+        console.log('Notification permission:', permission);
+      }
+    };
+    
+    setupNotifications();
+    
+    const unsubscribe = firebaseService.onTasksChange((updatedTasks) => {
+      setTasks(updatedTasks);
+      checkForDueTasksAndReminders(updatedTasks);
+    });
+
+    return () => unsubscribe();
+  }, [checkForDueTasksAndReminders]);
 
   const showNotification = (title: string, body: string) => {
     if (!('Notification' in window)) return;
@@ -78,6 +78,17 @@ const TaskManager: React.FC = () => {
       });
     }
   };
+
+  // ... שאר הקוד נשאר זהה
+
+  return (
+    <div className="p-4">
+      {/* ... שאר הקוד נשאר זהה */}
+    </div>
+  );
+};
+
+export default TaskManager;
 
   const handleAddTask = async () => {
     if (!newTask.clientName || !newTask.taskName || !newTask.dueDate) {
