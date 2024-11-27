@@ -10,6 +10,7 @@ interface Task {
   dueDate: string;
   reminderDate?: string;
   completed: boolean;
+  notified?: boolean;
 }
 
 const TaskManager: React.FC = () => {
@@ -22,6 +23,7 @@ const TaskManager: React.FC = () => {
     dueDate: '',
     reminderDate: '',
     completed: false,
+    notified: false
   });
 
   useEffect(() => {
@@ -38,7 +40,13 @@ const TaskManager: React.FC = () => {
     }
 
     const taskId = Date.now();
-    const task = { ...newTask, id: taskId } as Task;
+    const task = { 
+      ...newTask, 
+      id: taskId,
+      completed: false,
+      notified: false
+    } as Task;
+    
     await firebaseService.saveTask(task);
     setNewTask({
       clientName: '',
@@ -46,7 +54,9 @@ const TaskManager: React.FC = () => {
       dueDate: '',
       reminderDate: '',
       completed: false,
+      notified: false
     });
+    alert('המשימה נוספה בהצלחה');
   };
 
   const handleEditTask = (task: Task) => {
@@ -62,8 +72,10 @@ const TaskManager: React.FC = () => {
 
   const handleDeleteTask = async (id: number) => {
     const task = tasks.find(t => t.id === id);
-    await firebaseService.deleteTask(id);
-    alert(`המשימה "${task?.taskName}" נמחקה בהצלחה`);
+    if (window.confirm(`האם אתה בטוח שברצונך למחוק את המשימה "${task?.taskName}"?`)) {
+      await firebaseService.deleteTask(id);
+      alert(`המשימה "${task?.taskName}" נמחקה בהצלחה`);
+    }
   };
 
   const handleToggleComplete = async (id: number, completed: boolean) => {
@@ -72,104 +84,100 @@ const TaskManager: React.FC = () => {
     alert(`המשימה "${task?.taskName}" ${completed ? 'הושלמה' : 'סומנה כלא הושלמה'}`);
   };
 
- // פונקציות חדשות לטיפול בתאריכים וגיבוי
+  const handleBackupTasks = () => {
+    const tasksForExport = tasks.map(task => ({
+      id: task.id,
+      clientName: task.clientName,
+      task: task.taskName,
+      dueDate: task.dueDate,
+      reminderDate: task.reminderDate || null,
+      completed: task.completed,
+      notified: task.notified || false
+    }));
+    
+    const dataStr = JSON.stringify(tasksForExport, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+    const exportFileDefaultName = `tasks-backup-${new Date().toISOString()}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+  };
 
-const handleBackupTasks = () => {
-  const tasksForExport = tasks.map(task => ({
-    ...task,
-    dueDate: task.dueDate.split('T')[0], // מוציא רק את התאריך
-    reminderDate: task.reminderDate || null // מטפל במקרה שאין תזכורת
-  }));
-  
-  const dataStr = JSON.stringify(tasksForExport, null, 2);
-  const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-  const exportFileDefaultName = `tasks-backup-${new Date().toISOString().split('T')[0]}.json`;
-  
-  const linkElement = document.createElement('a');
-  linkElement.setAttribute('href', dataUri);
-  linkElement.setAttribute('download', exportFileDefaultName);
-  linkElement.click();
-};
-
-const handleImportTasks = async (importedTasks: any[]) => {
-  try {
-    for (const task of importedTasks) {
-      await firebaseService.saveTask({
-        id: task.id,
-        clientName: task.clientName,
-        taskName: task.task || task.taskName, // תמיכה בשני הפורמטים
-        dueDate: task.dueDate,
-        reminderDate: task.reminderDate || null,
-        completed: task.completed || false
-      });
+  const handleImportTasks = async (importedTasks: any[]) => {
+    try {
+      for (const task of importedTasks) {
+        await firebaseService.saveTask({
+          id: task.id,
+          clientName: task.clientName,
+          taskName: task.task || task.taskName,
+          dueDate: task.dueDate,
+          reminderDate: task.reminderDate || null,
+          completed: task.completed || false,
+          notified: task.notified || false
+        });
+      }
+      alert('הנתונים נטענו בהצלחה');
+    } catch (error) {
+      alert('שגיאה בטעינת הקובץ');
+      console.error(error);
     }
-    alert('הנתונים נטענו בהצלחה');
-  } catch (error) {
-    alert('שגיאה בטעינת הקובץ');
-    console.error(error);
-  }
-};
- // ... בתוך הקומפוננטה TaskManager
+  };
 
- return (
-  <div className="p-4">
-    <div className="flex justify-between items-center mb-4">
-      <h1 className="text-xl font-bold">מנהל משימות</h1>
-      <div className="flex gap-2">
-        <button onClick={handleBackupTasks} className="bg-green-500 text-white p-2 rounded hover:bg-green-600 transition-colors">
-          גיבוי משימות
-        </button>
-        <label htmlFor="importFile" className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 transition-colors cursor-pointer">
-          טען מגיבוי
-          <input
-            id="importFile"
-            type="file"
-            accept=".json"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) {
-                const reader = new FileReader();
-                reader.onload = async (event) => {
-                  try {
-                    const tasks = JSON.parse(event.target?.result as string);
-                    await handleImportTasks(tasks);
-                  } catch (error) {
-                    alert('שגיאה בטעינת הקובץ');
-                    console.error(error);
-                  }
-                };
-                reader.readAsText(file);
-              }
-            }}
-          />
-        </label>
+  const sortedAndFilteredTasks = [...tasks]
+    .sort((a, b) => {
+      if (a.completed !== b.completed) {
+        return a.completed ? 1 : -1;
+      }
+      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+    })
+    .filter((task) => {
+      if (filter === 'all') return true;
+      return filter === 'completed' ? task.completed : !task.completed;
+    });
+
+  return (
+    <div className="p-4">
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-xl font-bold">מנהל משימות</h1>
+        <div className="flex gap-2">
+          <button 
+            onClick={handleBackupTasks}
+            className="bg-green-500 text-white p-2 rounded hover:bg-green-600 transition-colors"
+          >
+            גיבוי משימות
+          </button>
+          <label 
+            htmlFor="importFile" 
+            className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 transition-colors cursor-pointer"
+          >
+            טען מגיבוי
+            <input
+              id="importFile"
+              type="file"
+              accept=".json"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  const reader = new FileReader();
+                  reader.onload = async (event) => {
+                    try {
+                      const tasks = JSON.parse(event.target?.result as string);
+                      await handleImportTasks(tasks);
+                    } catch (error) {
+                      alert('שגיאה בטעינת הקובץ');
+                      console.error(error);
+                    }
+                  };
+                  reader.readAsText(file);
+                }
+              }}
+            />
+          </label>
+        </div>
       </div>
-    </div>
-    );
-
-<input
-  id="importFile"
-  type="file"
-  accept=".json"
-  className="hidden"
-  onChange={(e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        try {
-          const tasks = JSON.parse(event.target?.result as string);
-          await handleImportTasks(tasks);
-        } catch (error) {
-          alert('שגיאה בטעינת הקובץ');
-          console.error(error);
-        }
-      };
-      reader.readAsText(file);
-    }
-  }}
-/>
 
       <div className="mb-4">
         <input
@@ -177,26 +185,26 @@ const handleImportTasks = async (importedTasks: any[]) => {
           placeholder="שם לקוח"
           value={newTask.clientName}
           onChange={(e) => setNewTask({ ...newTask, clientName: e.target.value })}
-          className="border rounded p-2 mr-2"
+          className="border rounded p-2 ml-2"
         />
         <input
           type="text"
           placeholder="שם משימה"
           value={newTask.taskName}
           onChange={(e) => setNewTask({ ...newTask, taskName: e.target.value })}
-          className="border rounded p-2 mr-2"
+          className="border rounded p-2 ml-2"
         />
         <input
           type="date"
-          value={newTask.dueDate}
+          value={newTask.dueDate?.split('T')[0]}
           onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })}
-          className="border rounded p-2 mr-2"
+          className="border rounded p-2 ml-2"
         />
         <input
           type="datetime-local"
           value={newTask.reminderDate}
           onChange={(e) => setNewTask({ ...newTask, reminderDate: e.target.value })}
-          className="border rounded p-2 mr-2"
+          className="border rounded p-2 ml-2"
         />
         <button 
           onClick={handleAddTask}
@@ -247,7 +255,14 @@ const handleImportTasks = async (importedTasks: any[]) => {
           </thead>
           <tbody>
             {sortedAndFilteredTasks.map((task, index) => (
-              <tr key={task.id} className={index % 2 === 0 ? 'bg-blue-50' : 'bg-white'}>
+              <tr 
+                key={task.id} 
+                className={`${
+                  index % 2 === 0 ? 'bg-blue-50' : 'bg-white'
+                } ${
+                  task.completed ? 'text-gray-500' : ''
+                }`}
+              >
                 <td className="border border-gray-200 p-2 text-center">
                   <input
                     type="checkbox"
@@ -284,7 +299,7 @@ const handleImportTasks = async (importedTasks: any[]) => {
                   {editingTask?.id === task.id ? (
                     <input
                       type="date"
-                      value={editingTask.dueDate}
+                      value={editingTask.dueDate.split('T')[0]}
                       onChange={(e) => setEditingTask({ ...editingTask, dueDate: e.target.value })}
                       className="border rounded p-1"
                     />
@@ -304,12 +319,12 @@ const handleImportTasks = async (importedTasks: any[]) => {
                     task.reminderDate ? new Date(task.reminderDate).toLocaleString('he-IL') : 'אין'
                   )}
                 </td>
-                <td className="border border-gray-200 p-2 text-center space-x-2 rtl:space-x-reverse">
+                <td className="border border-gray-200 p-2 text-center">
                   {editingTask?.id === task.id ? (
-                    <>
+                    <div className="space-x-2 rtl:space-x-reverse">
                       <button
                         onClick={handleUpdateTask}
-                        className="bg-green-500 text-white p-2 rounded hover:bg-green-600 transition-colors mr-2"
+                        className="bg-green-500 text-white p-2 rounded hover:bg-green-600 transition-colors"
                       >
                         שמור
                       </button>
@@ -319,12 +334,12 @@ const handleImportTasks = async (importedTasks: any[]) => {
                       >
                         בטל
                       </button>
-                    </>
+                    </div>
                   ) : (
-                    <>
+                    <div className="space-x-2 rtl:space-x-reverse">
                       <button
                         onClick={() => handleEditTask(task)}
-                        className="bg-yellow-500 text-white p-2 rounded hover:bg-yellow-600 transition-colors mr-2"
+                        className="bg-yellow-500 text-white p-2 rounded hover:bg-yellow-600 transition-colors"
                       >
                         ערוך
                       </button>
@@ -334,7 +349,7 @@ const handleImportTasks = async (importedTasks: any[]) => {
                       >
                         מחק
                       </button>
-                    </>
+                    </div>
                   )}
                 </td>
               </tr>
