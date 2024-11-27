@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { firebaseService } from '../lib/firebase';
+import Image from 'next/image';
 
 interface Task {
   id: number;
@@ -17,6 +18,8 @@ const TaskManager: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [filter, setFilter] = useState<'all' | 'completed' | 'active'>('all');
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchField, setSearchField] = useState<'all' | 'clientName' | 'taskName' | 'dueDate'>('all');
   const [newTask, setNewTask] = useState<Partial<Task>>({
     clientName: '',
     taskName: '',
@@ -125,7 +128,27 @@ const TaskManager: React.FC = () => {
     }
   };
 
-  const sortedAndFilteredTasks = [...tasks]
+  const filteredTasks = tasks.filter(task => {
+    if (searchQuery === '') return true;
+    
+    const query = searchQuery.toLowerCase();
+    switch (searchField) {
+      case 'clientName':
+        return task.clientName.toLowerCase().includes(query);
+      case 'taskName':
+        return task.taskName.toLowerCase().includes(query);
+      case 'dueDate':
+        return task.dueDate.includes(query);
+      case 'all':
+        return task.clientName.toLowerCase().includes(query) ||
+               task.taskName.toLowerCase().includes(query) ||
+               task.dueDate.includes(query);
+      default:
+        return true;
+    }
+  });
+
+  const sortedAndFilteredTasks = filteredTasks
     .sort((a, b) => {
       if (a.completed !== b.completed) {
         return a.completed ? 1 : -1;
@@ -137,21 +160,22 @@ const TaskManager: React.FC = () => {
       return filter === 'completed' ? task.completed : !task.completed;
     });
 
+  const isHearingTask = (taskName: string) => {
+    return taskName.toLowerCase().includes('דיון');
+  };
+  
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-xl font-bold">מנהל משימות</h1>
+        <div className="flex items-center">
+          <Image src="/icons/favicon.ico" alt="Task Manager" width={32} height={32} className="ml-2" />
+          <h1 className="text-xl font-bold">מנהל משימות</h1>
+        </div>
         <div className="flex gap-2">
-          <button 
-            onClick={handleBackupTasks}
-            className="bg-green-500 text-white p-2 rounded hover:bg-green-600 transition-colors"
-          >
+          <button onClick={handleBackupTasks} className="bg-green-500 text-white p-2 rounded hover:bg-green-600 transition-colors">
             גיבוי משימות
           </button>
-          <label 
-            htmlFor="importFile" 
-            className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 transition-colors cursor-pointer"
-          >
+          <label htmlFor="importFile" className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 transition-colors cursor-pointer">
             טען מגיבוי
             <input
               id="importFile"
@@ -177,6 +201,26 @@ const TaskManager: React.FC = () => {
             />
           </label>
         </div>
+      </div>
+
+      <div className="mb-4 flex items-center gap-2">
+        <input
+          type="text"
+          placeholder="חיפוש..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="border rounded p-2"
+        />
+        <select
+          value={searchField}
+          onChange={(e) => setSearchField(e.target.value as any)}
+          className="border rounded p-2"
+        >
+          <option value="all">הכל</option>
+          <option value="clientName">לקוח</option>
+          <option value="taskName">משימה</option>
+          <option value="dueDate">תאריך</option>
+        </select>
       </div>
 
       <div className="mb-4">
@@ -257,11 +301,11 @@ const TaskManager: React.FC = () => {
             {sortedAndFilteredTasks.map((task, index) => (
               <tr 
                 key={task.id} 
-                className={`${
-                  index % 2 === 0 ? 'bg-blue-50' : 'bg-white'
-                } ${
-                  task.completed ? 'text-gray-500' : ''
-                }`}
+                className={`
+                  ${isHearingTask(task.taskName) ? 'bg-blue-100' : index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}
+                  ${task.completed ? 'text-gray-500' : ''}
+                  border-b border-gray-200
+                `}
               >
                 <td className="border border-gray-200 p-2 text-center">
                   <input
@@ -321,7 +365,7 @@ const TaskManager: React.FC = () => {
                 </td>
                 <td className="border border-gray-200 p-2 text-center">
                   {editingTask?.id === task.id ? (
-                    <div className="space-x-2 rtl:space-x-reverse">
+                    <div className="flex justify-center gap-2">
                       <button
                         onClick={handleUpdateTask}
                         className="bg-green-500 text-white p-2 rounded hover:bg-green-600 transition-colors"
@@ -336,7 +380,7 @@ const TaskManager: React.FC = () => {
                       </button>
                     </div>
                   ) : (
-                    <div className="space-x-2 rtl:space-x-reverse">
+                    <div className="flex justify-center gap-2">
                       <button
                         onClick={() => handleEditTask(task)}
                         className="bg-yellow-500 text-white p-2 rounded hover:bg-yellow-600 transition-colors"
@@ -361,4 +405,4 @@ const TaskManager: React.FC = () => {
   );
 };
 
-export default TaskManager;
+export default TaskManager; 
