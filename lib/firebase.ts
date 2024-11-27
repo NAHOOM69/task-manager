@@ -4,11 +4,12 @@ import { getDatabase, ref, set, onValue, remove, update } from "firebase/databas
 const firebaseConfig = {
   apiKey: "AIzaSyDW-osvniH7Q5qG-DnH69TJHE_kdzHDfjA",
   authDomain: "task-manager211124.firebaseapp.com",
-  databaseURL: "https://task-manager211124-default-rtdb.firebaseio.com",
+  databaseURL: "https://task-manager211124-default-rtdb.europe-west1.firebasedatabase.app",
   projectId: "task-manager211124",
-  storageBucket: "task-manager211124.appspot.com",
+  storageBucket: "task-manager211124.firebasestorage.app",
   messagingSenderId: "1090043201443",
-  appId: "1:1090043201443:web:478e66399f3dbcf0ab3c16"
+  appId: "1:1090043201443:web:478e66399f3dbcf0ab3c16",
+  measurementId: "G-8J9LQ6ZRGD"
 };
 
 const app = initializeApp(firebaseConfig);
