@@ -132,16 +132,10 @@ const handleImportTasks = async (importedTasks: any[]) => {
     <div className="flex justify-between items-center mb-4">
       <h1 className="text-xl font-bold">מנהל משימות</h1>
       <div className="flex gap-2">
-        <button 
-          onClick={handleBackupTasks}
-          className="bg-green-500 text-white p-2 rounded hover:bg-green-600 transition-colors"
-        >
+        <button onClick={handleBackupTasks} className="bg-green-500 text-white p-2 rounded hover:bg-green-600 transition-colors">
           גיבוי משימות
         </button>
-        <label 
-          htmlFor="importFile" 
-          className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 transition-colors cursor-pointer"
-        >
+        <label htmlFor="importFile" className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 transition-colors cursor-pointer">
           טען מגיבוי
           <input
             id="importFile"
@@ -168,9 +162,7 @@ const handleImportTasks = async (importedTasks: any[]) => {
         </label>
       </div>
     </div>
-    {/* המשך הקוד הקיים */}
-  </div>
-);
+    );
 
 <input
   id="importFile"
