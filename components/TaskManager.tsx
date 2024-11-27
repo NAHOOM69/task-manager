@@ -125,30 +125,53 @@ const handleImportTasks = async (importedTasks: any[]) => {
       return filter === 'completed' ? task.completed : !task.completed;
     });
 
-  return (
-    <div className="p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-xl font-bold">מנהל משימות</h1>
-        <div className="flex gap-2">
-          <button 
-            onClick={handleBackupTasks}
-            className="bg-green-500 text-white p-2 rounded hover:bg-green-600 transition-colors"
-          >
-            גיבוי משימות
-          </button>
-          <label 
-            htmlFor="importFile" 
-            className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 transition-colors cursor-pointer"
-          >
-            טען מגיבוי
-          </label>
-          זה לא קובץ גיבוי של המשימות - זה קובץ הרשאות של Firebase. 
+ // ... בתוך הקומפוננטה TaskManager
 
-בוא נעדכן את הלוגיקה של ייבוא/ייצוא הקבצים ומבנה התאריכים:
+ return (
+  <div className="p-4">
+    <div className="flex justify-between items-center mb-4">
+      <h1 className="text-xl font-bold">מנהל משימות</h1>
+      <div className="flex gap-2">
+        <button 
+          onClick={handleBackupTasks}
+          className="bg-green-500 text-white p-2 rounded hover:bg-green-600 transition-colors"
+        >
+          גיבוי משימות
+        </button>
+        <label 
+          htmlFor="importFile" 
+          className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 transition-colors cursor-pointer"
+        >
+          טען מגיבוי
+          <input
+            id="importFile"
+            type="file"
+            accept=".json"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                  try {
+                    const tasks = JSON.parse(event.target?.result as string);
+                    await handleImportTasks(tasks);
+                  } catch (error) {
+                    alert('שגיאה בטעינת הקובץ');
+                    console.error(error);
+                  }
+                };
+                reader.readAsText(file);
+              }
+            }}
+          />
+        </label>
+      </div>
+    </div>
+    {/* המשך הקוד הקיים */}
+  </div>
+);
 
-החלף את פונקציות הייבוא/ייצוא הקיימות בקוד החדש, ועדכן את ה-input:
-
-```jsx
 <input
   id="importFile"
   type="file"
@@ -171,7 +194,6 @@ const handleImportTasks = async (importedTasks: any[]) => {
     }
   }}
 />
-```
 
       <div className="mb-4">
         <input
