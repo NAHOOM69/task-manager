@@ -72,16 +72,46 @@ const TaskManager: React.FC = () => {
     alert(`המשימה "${task?.taskName}" ${completed ? 'הושלמה' : 'סומנה כלא הושלמה'}`);
   };
 
-  const handleBackupTasks = () => {
-    const dataStr = JSON.stringify(tasks);
-    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-    const exportFileDefaultName = `tasks-backup-${new Date().toISOString()}.json`;
-    
-    const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', exportFileDefaultName);
-    linkElement.click();
-  };
+ // פונקציות חדשות לטיפול בתאריכים וגיבוי
+
+const handleBackupTasks = () => {
+  const tasksForExport = tasks.map(task => ({
+    ...task,
+    dueDate: task.dueDate.split('T')[0], // מוציא רק את התאריך
+    reminderDate: task.reminderDate || null // מטפל במקרה שאין תזכורת
+  }));
+  
+  const dataStr = JSON.stringify(tasksForExport, null, 2);
+  const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+  const exportFileDefaultName = `tasks-backup-${new Date().toISOString().split('T')[0]}.json`;
+  
+  const linkElement = document.createElement('a');
+  linkElement.setAttribute('href', dataUri);
+  linkElement.setAttribute('download', exportFileDefaultName);
+  linkElement.click();
+};
+
+const handleImportTasks = async (importedTasks: any[]) => {
+  try {
+    for (const task of importedTasks) {
+      // מוודא שיש תאריך תקין
+      const dueDate = task.dueDate.includes('T') ? task.dueDate : `${task.dueDate}T00:00:00`;
+      const reminderDate = task.reminderDate ? 
+        (task.reminderDate.includes('T') ? task.reminderDate : `${task.reminderDate}T00:00:00`) : 
+        null;
+
+      await firebaseService.saveTask({
+        ...task,
+        dueDate,
+        reminderDate
+      });
+    }
+    alert('הנתונים נטענו בהצלחה');
+  } catch (error) {
+    alert('שגיאה בטעינת הקובץ');
+    console.error(error);
+  }
+};
 
   const sortedAndFilteredTasks = [...tasks]
     .sort((a, b) => {
@@ -112,33 +142,36 @@ const TaskManager: React.FC = () => {
           >
             טען מגיבוי
           </label>
-          <input
-            id="importFile"
-            type="file"
-            accept=".json"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) {
-                const reader = new FileReader();
-                reader.onload = async (event) => {
-                  try {
-                    const tasks = JSON.parse(event.target?.result as string);
-                    for (const task of tasks) {
-                      await firebaseService.saveTask(task);
-                    }
-                    alert('הנתונים נטענו בהצלחה');
-                  } catch (error) {
-                    alert('שגיאה בטעינת הקובץ');
-                    console.error(error);
-                  }
-                };
-                reader.readAsText(file);
-              }
-            }}
-          />
-        </div>
-      </div>
+          זה לא קובץ גיבוי של המשימות - זה קובץ הרשאות של Firebase. 
+
+בוא נעדכן את הלוגיקה של ייבוא/ייצוא הקבצים ומבנה התאריכים:
+
+החלף את פונקציות הייבוא/ייצוא הקיימות בקוד החדש, ועדכן את ה-input:
+
+```jsx
+<input
+  id="importFile"
+  type="file"
+  accept=".json"
+  className="hidden"
+  onChange={(e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const tasks = JSON.parse(event.target?.result as string);
+          await handleImportTasks(tasks);
+        } catch (error) {
+          alert('שגיאה בטעינת הקובץ');
+          console.error(error);
+        }
+      };
+      reader.readAsText(file);
+    }
+  }}
+/>
+```
 
       <div className="mb-4">
         <input
