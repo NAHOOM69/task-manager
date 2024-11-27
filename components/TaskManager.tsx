@@ -102,6 +102,39 @@ const TaskManager: React.FC = () => {
         </button>
       </div>
 
+
+      // הוסף אחרי כפתור הגיבוי בקומפוננטת TaskManager
+<label htmlFor="importFile" className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 transition-colors cursor-pointer mr-2">
+  טען מגיבוי
+</label>
+<input
+  id="importFile"
+  type="file"
+  accept=".json"
+  className="hidden"
+  onChange={(e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const tasks = JSON.parse(event.target?.result as string);
+          for (const task of tasks) {
+            await firebaseService.saveTask(task);
+          }
+          alert('הנתונים נטענו בהצלחה');
+        } catch (error) {
+          alert('שגיאה בטעינת הקובץ');
+          console.error(error);
+        }
+      };
+      reader.readAsText(file);
+    }
+  }}
+/>
+
+
+
       <div className="mb-4">
         <input
           type="text"
@@ -276,34 +309,5 @@ const TaskManager: React.FC = () => {
     </div>
   );
 };
-// הוסף אחרי כפתור הגיבוי בקומפוננטת TaskManager
-<label htmlFor="importFile" className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 transition-colors cursor-pointer mr-2">
-  טען מגיבוי
-</label>
-<input
-  id="importFile"
-  type="file"
-  accept=".json"
-  className="hidden"
-  onChange={(e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        try {
-          const tasks = JSON.parse(event.target?.result as string);
-          for (const task of tasks) {
-            await firebaseService.saveTask(task);
-          }
-          alert('הנתונים נטענו בהצלחה');
-        } catch (error) {
-          alert('שגיאה בטעינת הקובץ');
-          console.error(error);
-        }
-      };
-      reader.readAsText(file);
-    }
-  }}
-/>
 
 export default TaskManager;
