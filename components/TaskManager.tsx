@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { firebaseService } from '../lib/firebase';
 
 interface Task {
@@ -57,14 +57,19 @@ const TaskManager: React.FC = () => {
     if (!editingTask) return;
     await firebaseService.updateTask(editingTask);
     setEditingTask(null);
+    alert(`המשימה "${editingTask.taskName}" עודכנה בהצלחה`);
   };
 
   const handleDeleteTask = async (id: number) => {
+    const task = tasks.find(t => t.id === id);
     await firebaseService.deleteTask(id);
+    alert(`המשימה "${task?.taskName}" נמחקה בהצלחה`);
   };
 
   const handleToggleComplete = async (id: number, completed: boolean) => {
     await firebaseService.updateTaskStatus(id, completed);
+    const task = tasks.find(t => t.id === id);
+    alert(`המשימה "${task?.taskName}" ${completed ? 'הושלמה' : 'סומנה כלא הושלמה'}`);
   };
 
   const handleBackupTasks = () => {
@@ -91,53 +96,49 @@ const TaskManager: React.FC = () => {
     });
 
   return (
-
- {/* החלק הראשון של הקומפוננטה */}
-<div className="p-4">
-  <div className="flex justify-between items-center mb-4">
-    <h1 className="text-xl font-bold">מנהל משימות</h1>
-    <div className="flex gap-2">
-      <button 
-        onClick={handleBackupTasks}
-        className="bg-green-500 text-white p-2 rounded hover:bg-green-600 transition-colors"
-      >
-        גיבוי משימות
-      </button>
-      <label 
-        htmlFor="importFile" 
-        className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 transition-colors cursor-pointer"
-      >
-        טען מגיבוי
-      </label>
-      <input
-        id="importFile"
-        type="file"
-        accept=".json"
-        className="hidden"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) {
-            const reader = new FileReader();
-            reader.onload = async (event) => {
-              try {
-                const tasks = JSON.parse(event.target?.result as string);
-                for (const task of tasks) {
-                  await firebaseService.saveTask(task);
-                }
-                alert('הנתונים נטענו בהצלחה');
-              } catch (error) {
-                alert('שגיאה בטעינת הקובץ');
-                console.error(error);
+    <div className="p-4">
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-xl font-bold">מנהל משימות</h1>
+        <div className="flex gap-2">
+          <button 
+            onClick={handleBackupTasks}
+            className="bg-green-500 text-white p-2 rounded hover:bg-green-600 transition-colors"
+          >
+            גיבוי משימות
+          </button>
+          <label 
+            htmlFor="importFile" 
+            className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 transition-colors cursor-pointer"
+          >
+            טען מגיבוי
+          </label>
+          <input
+            id="importFile"
+            type="file"
+            accept=".json"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                  try {
+                    const tasks = JSON.parse(event.target?.result as string);
+                    for (const task of tasks) {
+                      await firebaseService.saveTask(task);
+                    }
+                    alert('הנתונים נטענו בהצלחה');
+                  } catch (error) {
+                    alert('שגיאה בטעינת הקובץ');
+                    console.error(error);
+                  }
+                };
+                reader.readAsText(file);
               }
-            };
-            reader.readAsText(file);
-          }
-        }}
-      />
-    </div>
-  </div>
-  
-  {/* המשך הקומפוננטה */}    
+            }}
+          />
+        </div>
+      </div>
 
       <div className="mb-4">
         <input
