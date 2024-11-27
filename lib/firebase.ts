@@ -1,6 +1,5 @@
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, set, onValue, remove, update } from "firebase/database";
-import { getMessaging, getToken } from "firebase/messaging";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDW-osvniH7Q5qG-DnH69TJHE_kdzHDfjA",
@@ -18,59 +17,23 @@ const database = getDatabase(app);
 export class FirebaseService {
   private tasksRef = ref(database, "tasks");
 
-  // הוספת משימה חדשה
-  async saveTask(task: any): Promise<void> {
-    try {
-      await set(ref(database, `tasks/${task.id}`), task);
-      console.log("Task saved successfully:", task);
-    } catch (error) {
-      console.error("Error saving task:", error);
-      throw error;
-    }
+  async saveTask(task: any) {
+    return set(ref(database, `tasks/${task.id}`), task);
   }
 
-  // מחיקת משימה
-  async deleteTask(taskId: number): Promise<void> {
-    try {
-      await remove(ref(database, `tasks/${taskId}`));
-    } catch (error) {
-      console.error("Error deleting task:", error);
-      throw error;
-    }
+  async deleteTask(taskId: number) {
+    return remove(ref(database, `tasks/${taskId}`));
   }
 
-  // עדכון סטטוס משימה
-  async updateTaskStatus(taskId: number, completed: boolean): Promise<void> {
-    try {
-      await update(ref(database, `tasks/${taskId}`), { completed });
-    } catch (error) {
-      console.error("Error updating task status:", error);
-      throw error;
-    }
+  async updateTaskStatus(taskId: number, completed: boolean) {
+    return update(ref(database, `tasks/${taskId}`), { completed });
   }
 
-  // האזנה לשינויים ברשימת המשימות
-  onTasksChange(callback: (tasks: any[]) => void): () => void {
-    const unsubscribe = onValue(this.tasksRef, (snapshot) => {
+  onTasksChange(callback: (tasks: any[]) => void) {
+    return onValue(this.tasksRef, (snapshot) => {
       const data = snapshot.val();
-      const tasks = data ? Object.values(data) : [];
-      callback(tasks);
+      callback(data ? Object.values(data) : []);
     });
-    return unsubscribe;
-  }
-
-  // בקשת הרשאות התראות
-  async requestNotificationPermission(): Promise<string | null> {
-    try {
-      const messaging = getMessaging(app);
-      const token = await getToken(messaging, {
-        vapidKey: "BAi6iS6NtZopagHTG5wa0AQVDIcWxlM6ph28Y_PeRxP_rVqij3mNGqsdr3VAaApRvo3JZSNyjziBEaEt2uKrORs"
-      });
-      return token;
-    } catch (error) {
-      console.error("Error getting FCM token:", error);
-      return null;
-    }
   }
 }
 
