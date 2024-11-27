@@ -15,6 +15,7 @@ interface Task {
 const TaskManager: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [filter, setFilter] = useState<'all' | 'completed' | 'active'>('all');
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [newTask, setNewTask] = useState<Partial<Task>>({
     clientName: '',
     taskName: '',
@@ -23,61 +24,12 @@ const TaskManager: React.FC = () => {
     completed: false,
   });
 
-  const checkForDueTasksAndReminders = useCallback((taskList: Task[]) => {
-    const now = new Date();
-    taskList.forEach(task => {
-      if (task.completed) return;
-
-      if (task.dueDate) {
-        const dueDate = new Date(task.dueDate);
-        if (dueDate.getTime() - now.getTime() <= 0) {
-          showNotification(
-            'משימה לביצוע',
-            `המשימה "${task.taskName}" עבור ${task.clientName} צריכה להתבצע היום`
-          );
-        }
-      }
-
-      if (task.reminderDate) {
-        const reminderDate = new Date(task.reminderDate);
-        if (reminderDate.getTime() - now.getTime() <= 0) {
-          showNotification(
-            'תזכורת למשימה',
-            `תזכורת: המשימה "${task.taskName}" עבור ${task.clientName}`
-          );
-        }
-      }
-    });
-  }, []);
-
   useEffect(() => {
-    const setupNotifications = async () => {
-      if ('Notification' in window) {
-        const permission = await Notification.requestPermission();
-        console.log('Notification permission:', permission);
-      }
-    };
-    
-    setupNotifications();
-    
     const unsubscribe = firebaseService.onTasksChange((updatedTasks) => {
       setTasks(updatedTasks);
-      checkForDueTasksAndReminders(updatedTasks);
     });
-
     return () => unsubscribe();
-  }, [checkForDueTasksAndReminders]);
-
-  const showNotification = (title: string, body: string) => {
-    if (!('Notification' in window)) return;
-    
-    if (Notification.permission === 'granted') {
-      new Notification(title, { 
-        body,
-        icon: '/icons/icon-192x192.png'
-      });
-    }
-  };
+  }, []);
 
   const handleAddTask = async () => {
     if (!newTask.clientName || !newTask.taskName || !newTask.dueDate) {
@@ -87,7 +39,6 @@ const TaskManager: React.FC = () => {
 
     const taskId = Date.now();
     const task = { ...newTask, id: taskId } as Task;
-
     await firebaseService.saveTask(task);
     setNewTask({
       clientName: '',
@@ -98,12 +49,33 @@ const TaskManager: React.FC = () => {
     });
   };
 
+  const handleEditTask = (task: Task) => {
+    setEditingTask(task);
+  };
+
+  const handleUpdateTask = async () => {
+    if (!editingTask) return;
+    await firebaseService.updateTask(editingTask);
+    setEditingTask(null);
+  };
+
   const handleDeleteTask = async (id: number) => {
     await firebaseService.deleteTask(id);
   };
 
   const handleToggleComplete = async (id: number, completed: boolean) => {
     await firebaseService.updateTaskStatus(id, completed);
+  };
+
+  const handleBackupTasks = () => {
+    const dataStr = JSON.stringify(tasks);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    const exportFileDefaultName = `tasks-backup-${new Date().toISOString()}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
   };
 
   const sortedAndFilteredTasks = [...tasks]
@@ -120,7 +92,15 @@ const TaskManager: React.FC = () => {
 
   return (
     <div className="p-4">
-      <h1 className="text-xl font-bold mb-4">מנהל משימות</h1>
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-xl font-bold">מנהל משימות</h1>
+        <button 
+          onClick={handleBackupTasks}
+          className="bg-green-500 text-white p-2 rounded hover:bg-green-600 transition-colors"
+        >
+          גיבוי משימות
+        </button>
+      </div>
 
       <div className="mb-4">
         <input
@@ -198,14 +178,7 @@ const TaskManager: React.FC = () => {
           </thead>
           <tbody>
             {sortedAndFilteredTasks.map((task, index) => (
-              <tr 
-                key={task.id} 
-                className={`${
-                  index % 2 === 0 ? 'bg-blue-50' : 'bg-white'
-                } ${
-                  task.completed ? 'text-gray-500' : ''
-                }`}
-              >
+              <tr key={task.id} className={index % 2 === 0 ? 'bg-blue-50' : 'bg-white'}>
                 <td className="border border-gray-200 p-2 text-center">
                   <input
                     type="checkbox"
@@ -214,23 +187,86 @@ const TaskManager: React.FC = () => {
                     className="h-4 w-4 text-blue-600"
                   />
                 </td>
-                <td className="border border-gray-200 p-2">{task.clientName}</td>
-                <td className="border border-gray-200 p-2">{task.taskName}</td>
                 <td className="border border-gray-200 p-2">
-                  {new Date(task.dueDate).toLocaleDateString('he-IL')}
+                  {editingTask?.id === task.id ? (
+                    <input
+                      type="text"
+                      value={editingTask.clientName}
+                      onChange={(e) => setEditingTask({ ...editingTask, clientName: e.target.value })}
+                      className="border rounded p-1 w-full"
+                    />
+                  ) : (
+                    task.clientName
+                  )}
                 </td>
                 <td className="border border-gray-200 p-2">
-                  {task.reminderDate 
-                    ? new Date(task.reminderDate).toLocaleString('he-IL')
-                    : 'אין'}
+                  {editingTask?.id === task.id ? (
+                    <input
+                      type="text"
+                      value={editingTask.taskName}
+                      onChange={(e) => setEditingTask({ ...editingTask, taskName: e.target.value })}
+                      className="border rounded p-1 w-full"
+                    />
+                  ) : (
+                    task.taskName
+                  )}
                 </td>
-                <td className="border border-gray-200 p-2 text-center">
-                  <button
-                    onClick={() => handleDeleteTask(task.id)}
-                    className="bg-red-500 text-white p-2 rounded hover:bg-red-600 transition-colors"
-                  >
-                    מחק
-                  </button>
+                <td className="border border-gray-200 p-2">
+                  {editingTask?.id === task.id ? (
+                    <input
+                      type="date"
+                      value={editingTask.dueDate}
+                      onChange={(e) => setEditingTask({ ...editingTask, dueDate: e.target.value })}
+                      className="border rounded p-1"
+                    />
+                  ) : (
+                    new Date(task.dueDate).toLocaleDateString('he-IL')
+                  )}
+                </td>
+                <td className="border border-gray-200 p-2">
+                  {editingTask?.id === task.id ? (
+                    <input
+                      type="datetime-local"
+                      value={editingTask.reminderDate}
+                      onChange={(e) => setEditingTask({ ...editingTask, reminderDate: e.target.value })}
+                      className="border rounded p-1"
+                    />
+                  ) : (
+                    task.reminderDate ? new Date(task.reminderDate).toLocaleString('he-IL') : 'אין'
+                  )}
+                </td>
+                <td className="border border-gray-200 p-2 text-center space-x-2 rtl:space-x-reverse">
+                  {editingTask?.id === task.id ? (
+                    <>
+                      <button
+                        onClick={handleUpdateTask}
+                        className="bg-green-500 text-white p-2 rounded hover:bg-green-600 transition-colors mr-2"
+                      >
+                        שמור
+                      </button>
+                      <button
+                        onClick={() => setEditingTask(null)}
+                        className="bg-gray-500 text-white p-2 rounded hover:bg-gray-600 transition-colors"
+                      >
+                        בטל
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => handleEditTask(task)}
+                        className="bg-yellow-500 text-white p-2 rounded hover:bg-yellow-600 transition-colors mr-2"
+                      >
+                        ערוך
+                      </button>
+                      <button
+                        onClick={() => handleDeleteTask(task.id)}
+                        className="bg-red-500 text-white p-2 rounded hover:bg-red-600 transition-colors"
+                      >
+                        מחק
+                      </button>
+                    </>
+                  )}
                 </td>
               </tr>
             ))}

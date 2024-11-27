@@ -30,6 +30,15 @@ export class FirebaseService {
     return update(ref(database, `tasks/${taskId}`), { completed });
   }
 
+// בתוך מחלקת FirebaseService הוסף את הפונקציה הזו
+
+async updateTask(task: any): Promise<void> {
+  const taskRef = ref(database, `tasks/${task.id}`);
+  return update(taskRef, task);
+}
+
+
+
   onTasksChange(callback: (tasks: any[]) => void) {
     return onValue(this.tasksRef, (snapshot) => {
       const data = snapshot.val();
