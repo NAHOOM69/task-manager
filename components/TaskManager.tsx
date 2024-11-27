@@ -94,16 +94,13 @@ const handleBackupTasks = () => {
 const handleImportTasks = async (importedTasks: any[]) => {
   try {
     for (const task of importedTasks) {
-      // מוודא שיש תאריך תקין
-      const dueDate = task.dueDate.includes('T') ? task.dueDate : `${task.dueDate}T00:00:00`;
-      const reminderDate = task.reminderDate ? 
-        (task.reminderDate.includes('T') ? task.reminderDate : `${task.reminderDate}T00:00:00`) : 
-        null;
-
       await firebaseService.saveTask({
-        ...task,
-        dueDate,
-        reminderDate
+        id: task.id,
+        clientName: task.clientName,
+        taskName: task.task || task.taskName, // תמיכה בשני הפורמטים
+        dueDate: task.dueDate,
+        reminderDate: task.reminderDate || null,
+        completed: task.completed || false
       });
     }
     alert('הנתונים נטענו בהצלחה');
@@ -112,19 +109,6 @@ const handleImportTasks = async (importedTasks: any[]) => {
     console.error(error);
   }
 };
-
-  const sortedAndFilteredTasks = [...tasks]
-    .sort((a, b) => {
-      if (a.completed !== b.completed) {
-        return a.completed ? 1 : -1;
-      }
-      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-    })
-    .filter((task) => {
-      if (filter === 'all') return true;
-      return filter === 'completed' ? task.completed : !task.completed;
-    });
-
  // ... בתוך הקומפוננטה TaskManager
 
  return (
