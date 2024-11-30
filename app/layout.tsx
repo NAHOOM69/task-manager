@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Inter } from 'next/font/google';
 import './globals.css';
 
@@ -11,23 +11,56 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
   useEffect(() => {
     // רישום Service Worker
     const registerServiceWorker = async () => {
       if ('serviceWorker' in navigator) {
         try {
-          const registration = await navigator.serviceWorker.register('/sw.js');
+          const registration = await navigator.serviceWorker.register('/sw.js', {
+            scope: '/'
+          });
           console.log('Service Worker registered successfully:', registration);
+          
+          // בדיקת עדכונים לService Worker
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            if (newWorker) {
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  if (window.confirm('גרסה חדשה זמינה! האם לרענן את העמוד?')) {
+                    window.location.reload();
+                  }
+                }
+              });
+            }
+          });
         } catch (error) {
           console.error('Service Worker registration failed:', error);
         }
       }
     };
 
+    // טיפול בהתקנת PWA
+    const handleBeforeInstallPrompt = (event: Event) => {
+      event.preventDefault();
+      setDeferredPrompt(event);
+      setShowInstallPrompt(true);
+      console.log('Ready to install PWA');
+    };
+
+    const handleAppInstalled = () => {
+      setShowInstallPrompt(false);
+      setDeferredPrompt(null);
+      console.log('PWA was installed');
+    };
+
     // טיפול בשגיאות גלובליות
     const handleError = (event: ErrorEvent) => {
       console.error('Global error caught:', event.error);
-      // כאן אפשר להוסיף לוגיקה נוספת לטיפול בשגיאות
+      // TODO: הוסף הצגת הודעת שגיאה למשתמש
     };
 
     // טיפול בדחיות של Promise
@@ -39,13 +72,12 @@ export default function RootLayout({
     // טיפול באובדן חיבור
     const handleOffline = () => {
       console.log('Lost network connection');
-      // אפשר להציג הודעה למשתמש שאין חיבור
+      // TODO: הצג הודעת Offline למשתמש
     };
 
     // טיפול בחזרת חיבור
     const handleOnline = () => {
       console.log('Network connection restored');
-      // טעינה מחדש רק אם המשתמש מאשר
       if (window.confirm('החיבור לאינטרנט חזר. האם לטעון את העמוד מחדש?')) {
         window.location.reload();
       }
@@ -56,9 +88,12 @@ export default function RootLayout({
     window.addEventListener('unhandledrejection', handleUnhandledRejection);
     window.addEventListener('offline', handleOffline);
     window.addEventListener('online', handleOnline);
-    
-    // רישום Service Worker
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt as any);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    // רישום Service Worker והפעלת בדיקות PWA
     registerServiceWorker();
+    checkPWAStatus();
 
     // ניקוי בעת פירוק הקומפוננטה
     return () => {
@@ -66,8 +101,38 @@ export default function RootLayout({
       window.removeEventListener('unhandledrejection', handleUnhandledRejection);
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('online', handleOnline);
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt as any);
+      window.removeEventListener('appinstalled', handleAppInstalled);
     };
   }, []);
+
+  // בדיקת סטטוס PWA
+  const checkPWAStatus = () => {
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      console.log('Application is running in standalone mode');
+    }
+  };
+
+  // פונקציה להתקנת PWA
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+
+    try {
+      await (deferredPrompt as any).prompt();
+      const choiceResult = await (deferredPrompt as any).userChoice;
+      
+      if (choiceResult.outcome === 'accepted') {
+        console.log('User accepted the install prompt');
+      } else {
+        console.log('User dismissed the install prompt');
+      }
+      
+      setDeferredPrompt(null);
+      setShowInstallPrompt(false);
+    } catch (error) {
+      console.error('Error during PWA installation:', error);
+    }
+  };
 
   return (
     <html lang="he" dir="rtl">
@@ -81,6 +146,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="משימות" />
+        <meta name="description" content="מערכת לניהול משימות משפטיות" />
         <meta name="format-detection" content="telephone=no" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="theme-color" content="#3b82f6" />
@@ -99,31 +165,25 @@ export default function RootLayout({
           {children}
         </div>
 
-        {/* נוסיף סקריפט לבדיקת התקנת PWA */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              // בדיקה אם האפליקציה כבר מותקנת
-              if (window.matchMedia('(display-mode: standalone)').matches) {
-                console.log('Application is running in standalone mode');
-              }
-
-              // בדיקת תמיכה ב-beforeinstallprompt
-              window.addEventListener('beforeinstallprompt', (e) => {
-                e.preventDefault();
-                // שמירת האירוע לשימוש מאוחר יותר
-                window.deferredPrompt = e;
-                console.log('Ready to install PWA');
-              });
-
-              // אירוע לאחר התקנה
-              window.addEventListener('appinstalled', () => {
-                window.deferredPrompt = null;
-                console.log('PWA was installed');
-              });
-            `
-          }}
-        />
+        {/* כפתור התקנת PWA */}
+        {showInstallPrompt && (
+          <div className="fixed bottom-4 right-4 z-50">
+            <button
+              onClick={handleInstallClick}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2"
+            >
+              <span>התקן את האפליקציה</span>
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                className="h-5 w-5" 
+                viewBox="0 0 20 20" 
+                fill="currentColor"
+              >
+                <path fillRule="evenodd" d="M10 3a1 1 0 00-1 1v5H4a1 1 0 100 2h5v5a1 1 0 102 0v-5h5a1 1 0 100-2h-5V4a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            </button>
+          </div>
+        )}
       </body>
     </html>
   );
