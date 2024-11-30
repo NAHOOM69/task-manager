@@ -5,7 +5,8 @@
   "categories": ["productivity", "legal", "business"],
   "lang": "he-IL",
   "dir": "rtl",
-  "start_url": "/",
+  "start_url": "/?source=pwa",
+  "scope": "/",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
   "background_color": "#ffffff",
@@ -37,25 +38,13 @@
       "name": "הוסף משימה",
       "url": "/?action=new",
       "description": "יצירת משימה חדשה",
-      "icons": [
-        {
-          "src": "/icons/icon-144x144.png",
-          "sizes": "144x144",
-          "type": "image/png"
-        }
-      ]
+      "icons": [{ "src": "/icons/icon-144x144.png", "sizes": "144x144", "type": "image/png" }]
     },
     {
       "name": "משימות פעילות",
       "url": "/?tab=active",
       "description": "הצג משימות פעילות",
-      "icons": [
-        {
-          "src": "/icons/icon-144x144.png",
-          "sizes": "144x144",
-          "type": "image/png"
-        }
-      ]
+      "icons": [{ "src": "/icons/icon-144x144.png", "sizes": "144x144", "type": "image/png" }]
     }
   ]
 }
