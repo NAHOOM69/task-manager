@@ -1,5 +1,19 @@
 import React, { useState } from 'react';
 import {
+  AlertCircle,
+  CalendarCheck,
+  Clock,
+  User,
+  Building2,
+  ClipboardList,
+  UserCircle2,
+  Gavel,
+  X,
+  Save,
+  ListTodo,
+  FileSpreadsheet
+} from 'lucide-react';
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -9,27 +23,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from 'lucide-react';
-
-interface Task {
-  id: number;
-  clientName: string;
-  taskName: string;
-  dueDate: string;
-  reminderDate?: string;
-  completed: boolean;
-  notified?: boolean;
-  courtDate?: string;
-  court?: string;
-  judge?: string;
-  type?: 'hearing' | 'regular';
-}
+import { Task, TaskInput, TaskType } from '@/types/task';
 
 interface TaskFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (task: Partial<Task>) => Promise<void>;
-  initialTask?: Task | null;
+  onSubmit: (taskData: TaskInput) => Promise<void>;
+  initialTask: Task | null;
 }
 
 const FormInput: React.FC<{
@@ -39,9 +39,11 @@ const FormInput: React.FC<{
   onChange: (value: string) => void;
   error?: string;
   required?: boolean;
-}> = ({ label, type = "text", value, onChange, error, required }) => (
+  icon?: React.ReactNode;
+}> = ({ label, type = "text", value, onChange, error, required, icon }) => (
   <div className="space-y-2">
-    <Label>
+    <Label className="flex items-center gap-2">
+      {icon}
       {label}
       {required && <span className="text-red-500">*</span>}
     </Label>
@@ -67,15 +69,15 @@ const TaskFormDialog: React.FC<TaskFormDialogProps> = ({
   onSubmit,
   initialTask
 }) => {
-  const [formData, setFormData] = useState<Partial<Task>>({
+  const [formData, setFormData] = useState<TaskInput>({
     clientName: initialTask?.clientName || '',
     taskName: initialTask?.taskName || '',
     dueDate: initialTask?.dueDate ? initialTask.dueDate.split('T')[0] : '',
-    reminderDate: initialTask?.reminderDate || '',
-    type: initialTask?.type || 'regular',
-    court: initialTask?.court || '',
-    judge: initialTask?.judge || '',
-    courtDate: initialTask?.courtDate || ''
+    reminderDate: initialTask?.reminderDate,
+    type: initialTask?.type || TaskType.REGULAR,
+    court: initialTask?.court,
+    judge: initialTask?.judge,
+    courtDate: initialTask?.courtDate
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -96,7 +98,7 @@ const TaskFormDialog: React.FC<TaskFormDialogProps> = ({
       newErrors.dueDate = 'תאריך יעד הוא שדה חובה';
     }
     
-    if (formData.type === 'hearing') {
+    if (formData.type === TaskType.HEARING) {
       if (!formData.court?.trim()) {
         newErrors.court = 'בית משפט הוא שדה חובה עבור דיון';
       }
@@ -135,21 +137,26 @@ const TaskFormDialog: React.FC<TaskFormDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{initialTask ? 'עריכת משימה' : 'משימה חדשה'}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            {initialTask ? <FileSpreadsheet size={20} /> : <ListTodo size={20} />}
+            {initialTask ? 'עריכת משימה' : 'משימה חדשה'}
+          </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4" dir="rtl">
-          {/* Task Type Selection */}
           <div className="space-y-2">
-            <Label>סוג משימה</Label>
+            <Label className="flex items-center gap-2">
+              <ClipboardList size={18} />
+              סוג משימה
+            </Label>
             <div className="flex gap-4">
               <label className="flex items-center gap-2">
                 <input
                   type="radio"
                   name="type"
-                  value="regular"
-                  checked={formData.type === 'regular'}
-                  onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as 'regular' | 'hearing' }))}
+                  value={TaskType.REGULAR}
+                  checked={formData.type === TaskType.REGULAR}
+                  onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as TaskType }))}
                   className="w-4 h-4 text-blue-600"
                 />
                 <span>משימה רגילה</span>
@@ -158,9 +165,9 @@ const TaskFormDialog: React.FC<TaskFormDialogProps> = ({
                 <input
                   type="radio"
                   name="type"
-                  value="hearing"
-                  checked={formData.type === 'hearing'}
-                  onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as 'regular' | 'hearing' }))}
+                  value={TaskType.HEARING}
+                  checked={formData.type === TaskType.HEARING}
+                  onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as TaskType }))}
                   className="w-4 h-4 text-blue-600"
                 />
                 <span>דיון משפטי</span>
@@ -168,30 +175,32 @@ const TaskFormDialog: React.FC<TaskFormDialogProps> = ({
             </div>
           </div>
 
-          {/* Basic Fields */}
           <FormInput
             label="שם לקוח"
-            value={formData.clientName || ''}
+            value={formData.clientName}
             onChange={(value) => setFormData(prev => ({ ...prev, clientName: value }))}
             error={errors.clientName}
             required
+            icon={<UserCircle2 size={18} />}
           />
 
           <FormInput
             label="שם משימה"
-            value={formData.taskName || ''}
+            value={formData.taskName}
             onChange={(value) => setFormData(prev => ({ ...prev, taskName: value }))}
             error={errors.taskName}
             required
+            icon={<ClipboardList size={18} />}
           />
 
           <FormInput
             label="תאריך יעד"
             type="date"
-            value={formData.dueDate || ''}
+            value={formData.dueDate}
             onChange={(value) => setFormData(prev => ({ ...prev, dueDate: value }))}
             error={errors.dueDate}
             required
+            icon={<CalendarCheck size={18} />}
           />
 
           <FormInput
@@ -199,12 +208,15 @@ const TaskFormDialog: React.FC<TaskFormDialogProps> = ({
             type="datetime-local"
             value={formData.reminderDate || ''}
             onChange={(value) => setFormData(prev => ({ ...prev, reminderDate: value }))}
+            icon={<Clock size={18} />}
           />
 
-          {/* Court Details */}
-          {formData.type === 'hearing' && (
+          {formData.type === TaskType.HEARING && (
             <div className="space-y-4 border-t pt-4">
-              <h3 className="font-medium text-gray-900">פרטי דיון</h3>
+              <h3 className="font-medium text-gray-900 flex items-center gap-2">
+                <Gavel size={18} />
+                פרטי דיון
+              </h3>
               
               <FormInput
                 label="בית משפט"
@@ -212,12 +224,14 @@ const TaskFormDialog: React.FC<TaskFormDialogProps> = ({
                 onChange={(value) => setFormData(prev => ({ ...prev, court: value }))}
                 error={errors.court}
                 required
+                icon={<Building2 size={18} />}
               />
 
               <FormInput
                 label="שופט"
                 value={formData.judge || ''}
                 onChange={(value) => setFormData(prev => ({ ...prev, judge: value }))}
+                icon={<User size={18} />}
               />
 
               <FormInput
@@ -227,6 +241,7 @@ const TaskFormDialog: React.FC<TaskFormDialogProps> = ({
                 onChange={(value) => setFormData(prev => ({ ...prev, courtDate: value }))}
                 error={errors.courtDate}
                 required
+                icon={<CalendarCheck size={18} />}
               />
             </div>
           )}
@@ -239,9 +254,11 @@ const TaskFormDialog: React.FC<TaskFormDialogProps> = ({
 
           <div className="flex justify-end gap-3 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              <X size={18} className="ml-2" />
               ביטול
             </Button>
             <Button type="submit" disabled={isSubmitting}>
+              <Save size={18} className="ml-2" />
               {isSubmitting ? 'שומר...' : initialTask ? 'עדכן משימה' : 'צור משימה'}
             </Button>
           </div>

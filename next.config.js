@@ -15,7 +15,7 @@ const nextConfig = {
           {
             key: 'Service-Worker-Allowed',
             value: '/',
-          },
+          }
         ],
       },
       {
@@ -24,7 +24,7 @@ const nextConfig = {
           {
             key: 'Cache-Control',
             value: 'public, max-age=0, must-revalidate',
-          },
+          }
         ],
       },
       {
@@ -37,25 +37,23 @@ const nextConfig = {
           {
             key: 'X-Frame-Options',
             value: 'DENY',
-          },
-          {
-            key: 'X-DNS-Prefetch-Control',
-            value: 'on',
-          },
+          }
         ],
-      },
+      }
     ];
   },
   webpack: (config, { isServer }) => {
-    // PWA התאמות עבור
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
         fs: false,
+        net: false,
+        tls: false,
+        crypto: false,
       };
     }
     return config;
-  },
+  }
 };
 
 module.exports = nextConfig;

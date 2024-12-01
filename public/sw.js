@@ -8,7 +8,7 @@ const urlsToCache = [
   '/icons/icon-144x144.png',
   '/icons/icon-192x192.png',
   '/_next/static/css/app.css',
-  '/_next/static/js/main.js'
+  '/_next/static/js/main.js',
 ];
 
 // Install event handler
@@ -38,7 +38,7 @@ self.addEventListener('fetch', (event) => {
         return fetch(event.request).then(
           (response) => {
             // Check if we received a valid response
-            if(!response || response.status !== 200 || response.type !== 'basic') {
+            if (!response || response.status !== 200 || response.type !== 'basic') {
               return response;
             }
 
@@ -99,29 +99,29 @@ self.addEventListener('push', (event) => {
         taskId: data.taskId,
         url: data.url || '/',
         type: data.type || 'task',
-        timestamp: Date.now()
+        timestamp: Date.now(),
       },
       dir: 'rtl',
       lang: 'he',
       tag: `task-${data.taskId}`,
       renotify: true,
-      requireInteraction: true,  // Notification will persist until user interacts
-      silent: false,  // Enable sound
+      requireInteraction: true,
+      silent: false,
       timestamp: Date.now(),
       actions: [
         {
           action: 'open',
-          title: 'פתח משימה'
+          title: 'פתח משימה',
         },
         {
           action: 'snooze',
-          title: 'דחה ב-5 דקות'
+          title: 'דחה ב-5 דקות',
         },
         {
           action: 'dismiss',
-          title: 'סגור'
-        }
-      ]
+          title: 'סגור',
+        },
+      ],
     };
 
     event.waitUntil(
@@ -149,7 +149,7 @@ self.addEventListener('notificationclick', (event) => {
         ...event.notification.options,
         body: event.notification.body + '\n(תזכורת חוזרת)',
         tag: `task-${taskId}-snoozed`,
-        renotify: true
+        renotify: true,
       });
     }, 5 * 60 * 1000);
     return;

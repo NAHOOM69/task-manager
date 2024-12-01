@@ -1,4 +1,8 @@
-export type TaskType = 'hearing' | 'regular';
+
+export enum TaskType {
+  HEARING = 'hearing',
+  REGULAR = 'regular'
+}
 
 export interface Task {
   id: number;
