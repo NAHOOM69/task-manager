@@ -40,12 +40,28 @@ const TaskCard: React.FC<TaskCardProps> = ({
   onDelete
 }) => {
   const isOverdue = new Date(task.dueDate) < new Date() && !task.completed;
+  const taskNameLower = task.taskName.toLowerCase();
+  
+  const getBorderColor = () => {
+    if (taskNameLower.includes('דיון הוכחות')) {
+      return 'border-blue-600';
+    }
+    if (taskNameLower.includes('דיון') || 
+        taskNameLower.includes('קדם דיון') || 
+        taskNameLower.includes('דיון קדם')) {
+      return 'border-sky-300';
+    }
+    if (isOverdue && !task.completed) {
+      return 'border-red-300';
+    }
+    return 'border-gray-200';
+  };
 
   return (
     <div className={cn(
-      "border rounded-lg p-4 relative",
+      "border-2 rounded-lg p-4 relative",
       task.completed ? "bg-gray-50" : "bg-white",
-      isOverdue && !task.completed ? "border-red-300" : "border-gray-200"
+      getBorderColor()
     )}>
       <div className="flex justify-between items-start gap-4">
         <div className="flex-1">
@@ -54,7 +70,9 @@ const TaskCard: React.FC<TaskCardProps> = ({
           
           <div className="mt-2 space-y-1">
             <p className="text-sm text-gray-500">
-              תאריך יעד: {formatDate(task.dueDate)}
+              {task.dueDate && (
+                <span>תאריך יעד: {formatDate(task.dueDate)}</span>
+              )}
             </p>
             {task.reminderDate && (
               <p className="text-sm text-gray-500 flex items-center gap-1">
