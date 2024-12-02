@@ -10,7 +10,7 @@ import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { firebaseService } from '@/lib/firebase';
 import { NotificationService } from '@/lib/notifications';
-import { cleanTaskForFirebase, validateTask } from '@/lib/taskHelpers';
+import { cleanTaskForFirebase,validateTask} from '@/lib/taskHelpers';
 
 // Components
 import TaskCard from '@/components/TaskCard';

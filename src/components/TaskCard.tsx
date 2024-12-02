@@ -1,7 +1,8 @@
 import React from 'react';
 import { Task } from '@/types/task';
-import { Edit2, Trash2, CheckCircle } from 'lucide-react';
-import { formatDateForDevice } from '@/lib/utils';
+import { Edit2, Trash2, CheckCircle, Bell } from 'lucide-react';
+import { format } from 'date-fns';
+import { he } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -11,6 +12,26 @@ interface TaskCardProps {
   onEdit: () => void;
   onDelete: () => void;
 }
+
+const formatDate = (dateString: string) => {
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+    return format(date, 'dd/MM/yyyy', { locale: he });
+  } catch {
+    return '';
+  }
+};
+
+const formatDateTime = (dateString: string) => {
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+    return format(date, "dd/MM/yyyy HH:mm", { locale: he });
+  } catch {
+    return '';
+  }
+};
 
 const TaskCard: React.FC<TaskCardProps> = ({
   task,
@@ -28,15 +49,23 @@ const TaskCard: React.FC<TaskCardProps> = ({
     )}>
       <div className="flex justify-between items-start gap-4">
         <div className="flex-1">
-          {/* שם הלקוח כותרת ראשית */}
           <h3 className="font-semibold text-lg mb-1">{task.clientName}</h3>
-          {/* שם המשימה מתחת */}
           <p className="text-gray-600">{task.taskName}</p>
           
-          <div className="mt-2 text-sm text-gray-500">
-            <p>תאריך יעד: {formatDateForDevice(task.dueDate)}</p>
+          <div className="mt-2 space-y-1">
+            <p className="text-sm text-gray-500">
+              תאריך יעד: {formatDate(task.dueDate)}
+            </p>
+            {task.reminderDate && (
+              <p className="text-sm text-gray-500 flex items-center gap-1">
+                <Bell size={14} className="text-blue-500" />
+                תזכורת: {formatDateTime(task.reminderDate)}
+              </p>
+            )}
             {task.courtDate && (
-              <p>תאריך דיון: {formatDateForDevice(task.courtDate)}</p>
+              <p className="text-sm text-gray-500">
+                תאריך דיון: {formatDateTime(task.courtDate)}
+              </p>
             )}
           </div>
           {task.court && (

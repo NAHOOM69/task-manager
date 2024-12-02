@@ -5,37 +5,34 @@ export const cleanTaskForFirebase = (task: Partial<Task>): Task => {
     throw new Error('Task data is required');
   }
 
-  const cleanedTask: Task = {
-    id: task.id || Date.now(),
-    clientName: task.clientName?.trim() || '',
-    taskName: task.taskName?.trim() || '',
-    dueDate: task.dueDate || new Date().toISOString(),
-    completed: Boolean(task.completed),
-    notified: task.notified ?? false,
-    type: task.type || TaskType.REGULAR,
-    reminderDate: task.reminderDate || '',
-    court: task.court || '',
-    judge: task.judge || '',
-    courtDate: task.courtDate || ''
-  };
-
-  const validateDate = (dateString: string): string => {
+  // Helper for date validation and formatting
+  const validateDateTime = (dateString: string | undefined): string => {
     if (!dateString) return new Date().toISOString();
     try {
       const date = new Date(dateString);
       if (isNaN(date.getTime())) return new Date().toISOString();
+      // Ensure the time component is included
       return date.toISOString();
     } catch {
       return new Date().toISOString();
     }
   };
 
-  return {
-    ...cleanedTask,
-    dueDate: validateDate(cleanedTask.dueDate),
-    reminderDate: cleanedTask.reminderDate,
-    courtDate: cleanedTask.courtDate
+  const cleanedTask: Task = {
+    id: task.id || Date.now(),
+    clientName: task.clientName?.trim() || '',
+    taskName: task.taskName?.trim() || '',
+    dueDate: validateDateTime(task.dueDate),
+    completed: Boolean(task.completed),
+    notified: task.notified ?? false,
+    type: task.type || TaskType.REGULAR,
+    reminderDate: task.reminderDate ? validateDateTime(task.reminderDate) : '',
+    court: task.court?.trim() || '',
+    judge: task.judge?.trim() || '',
+    courtDate: task.courtDate ? validateDateTime(task.courtDate) : ''
   };
+
+  return cleanedTask;
 };
 
 export const validateTask = (task: Task): boolean => {
@@ -49,7 +46,7 @@ export const validateTask = (task: Task): boolean => {
     errors.push('שם משימה הוא שדה חובה');
   }
 
-  if (!task.dueDate) {
+  if (!task.dueDate && task.type !== TaskType.HEARING) {
     errors.push('תאריך יעד הוא שדה חובה');
   }
 
@@ -62,12 +59,19 @@ export const validateTask = (task: Task): boolean => {
     }
   }
 
+  // Date validations
   if (task.dueDate && isNaN(new Date(task.dueDate).getTime())) {
     errors.push('תאריך יעד אינו תקין');
   }
 
-  if (task.reminderDate && isNaN(new Date(task.reminderDate).getTime())) {
-    errors.push('תאריך תזכורת אינו תקין');
+  if (task.reminderDate) {
+    const reminderDate = new Date(task.reminderDate);
+    if (isNaN(reminderDate.getTime())) {
+      errors.push('תאריך תזכורת אינו תקין');
+    }
+    if (task.dueDate && reminderDate > new Date(task.dueDate)) {
+      errors.push('תאריך התזכורת חייב להיות לפני תאריך היעד');
+    }
   }
 
   if (task.courtDate && isNaN(new Date(task.courtDate).getTime())) {
