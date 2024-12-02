@@ -1,52 +1,30 @@
 'use client';
 
 import { Task, TaskInput, TaskType } from '@/types/task';
-
 import React, { useState, useEffect } from 'react';
 import { 
-  Plus,
-  Trash2, 
-  Edit2, 
-  CheckCircle,
-  Calendar,
-  Bell,
-  Search,
-  Building2,
-  User,
-  RotateCcw,
-  Loader2,
-  X,
-  AlertCircle,
-  Save,
-  RefreshCw
-
+  Plus, Trash2, Edit2, CheckCircle, Calendar, Bell, Search,
+  Building2, User, RotateCcw, Loader2, X, AlertCircle, Save, RefreshCw
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { firebaseService } from '@/lib/firebase';
 import { NotificationService } from '@/lib/notifications';
+import { cleanTaskForFirebase, validateTask } from '@/lib/taskHelpers';
 
-// ייבוא קומפוננטות
+// Components
 import TaskCard from '@/components/TaskCard';
 import TaskFormDialog from '@/components/TaskFormDialog';
-
-
-// UI Components
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-
-
-// Helper Functions
-const formatDateForDevice = (dateString: string): string => {
+// Date formatting utilities
+function formatDateForDevice(dateString: string): string {
+  if (!dateString) return '';
+  
   try {
     const date = new Date(dateString.replace(/-/g, '/'));
     if (isNaN(date.getTime())) {
@@ -57,22 +35,18 @@ const formatDateForDevice = (dateString: string): string => {
     console.error('Date formatting error:', error);
     return dateString;
   }
-};
+}
 
 const formatDateTimeForDevice = (dateString: string): string => {
   try {
     const date = new Date(dateString.replace(/-/g, '/'));
-    if (isNaN(date.getTime())) {
-      throw new Error('Invalid date');
-    }
+    if (isNaN(date.getTime())) throw new Error('Invalid date');
     return format(date, 'dd/MM/yyyy HH:mm', { locale: he });
   } catch (error) {
     console.error('Date/time formatting error:', error);
     return dateString;
   }
 };
-
-// חלק 2
 
 const TaskManager: React.FC = () => {
   // State declarations
@@ -86,7 +60,7 @@ const TaskManager: React.FC = () => {
   const [formType, setFormType] = useState<'add' | 'edit'>('add');
   const [isError, setIsError] = useState(false);
 
-  // Initialize NotificationService
+  // Initialize Notifications
   useEffect(() => {
     const initApp = async () => {
       try {
@@ -94,43 +68,62 @@ const TaskManager: React.FC = () => {
         await notificationService.init();
         await notificationService.requestPermission();
       } catch (error) {
-        console.error('Failed to initialize notifications:', error);
+        console.error('Notifications initialization failed:', error);
       }
     };
     void initApp();
   }, []);
 
-  // Firebase connection and data subscription
+  // Firebase Connection
   useEffect(() => {
-    let cleanup: (() => void) | undefined;
-    
     const initializeApp = async () => {
       setIsLoading(true);
+      setError(null);
+      console.log('Initializing Firebase connection...');
+
       try {
-        await firebaseService.testConnection();
-        cleanup = firebaseService.onTasksChange(
-          (updatedTasks: Task[]) => {
-            setTasks(updatedTasks.filter(task => task !== null));
+        for (let i = 0; i < 3; i++) {
+          try {
+            console.log(`Connection attempt ${i + 1}/3`);
+            await firebaseService.testConnection();
+            console.log('Firebase connected successfully');
+            break;
+          } catch (error) {
+            console.warn(`Connection attempt ${i + 1} failed:`, error);
+            if (i === 2) throw error;
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+
+        const unsubscribe = firebaseService.onTasksChange(
+          (updatedTasks) => {
+            console.log(`Received ${updatedTasks.length} tasks`);
+            setTasks(updatedTasks);
             setIsLoading(false);
+            setError(null);
           },
-          (error: Error) => {
+          (error) => {
             console.error('Firebase error:', error);
-            setError('אירעה שגיאה בטעינת המשימות. אנא נסה שוב מאוחר יותר.');
+            setError('אירעה שגיאה בטעינת המשימות');
             setIsLoading(false);
           }
         );
+
+        return () => {
+          console.log('Cleaning up Firebase subscription');
+          unsubscribe();
+        };
       } catch (error) {
-        console.error('Connection error:', error);
-        setError('אין חיבור לשרת. אנא בדוק את החיבור לאינטרנט.');
+        console.error('Firebase initialization failed:', error);
+        setError('אין חיבור לשרת');
         setIsLoading(false);
       }
     };
-  
+
     void initializeApp();
-    return () => cleanup?.();
   }, []);
 
-  // Check reminders
+  // Check Reminders
   useEffect(() => {
     const notificationService = NotificationService.getInstance();
     
@@ -138,12 +131,8 @@ const TaskManager: React.FC = () => {
       const now = new Date();
       for (const task of tasks) {
         try {
-          if (
-            task.reminderDate && 
-            !task.notified && 
-            !task.completed &&
-            new Date(task.reminderDate) <= now
-          ) {
+          if (task.reminderDate && !task.notified && !task.completed && 
+              new Date(task.reminderDate) <= now) {
             await notificationService.sendImmediateNotification(task);
             await firebaseService.updateTask({
               ...task,
@@ -151,7 +140,7 @@ const TaskManager: React.FC = () => {
             });
           }
         } catch (error) {
-          console.error('Error checking reminder for task:', task.id, error);
+          console.error('Reminder check failed for task:', task.id, error);
         }
       }
     };
@@ -161,34 +150,26 @@ const TaskManager: React.FC = () => {
     return () => clearInterval(interval);
   }, [tasks]);
 
-  //חלק 3
-
   // Task Management Functions
   const handleAddTask = async (taskData: Partial<Task>) => {
-    if (!taskData.clientName?.trim() || !taskData.taskName?.trim() || !taskData.dueDate) {
-      setError('יש למלא את כל שדות החובה');
-      return;
-    }
-
     try {
       setIsLoading(true);
-      const task: Task = {
-        ...taskData,
-        id: Date.now(),
-        completed: false,
-        notified: false,
-        type: taskData.courtDate ? 'hearing' : 'regular'
-      } as Task;
+      setError(null);
 
-      await firebaseService.saveTask(task);
-      if (taskData.reminderDate) {
+      const cleanedTask = cleanTaskForFirebase(taskData);
+      validateTask(cleanedTask);
+
+      await firebaseService.saveTask(cleanedTask);
+      
+      if (cleanedTask.reminderDate) {
         const notificationService = NotificationService.getInstance();
-        await notificationService.scheduleTaskReminder(task);
+        await notificationService.scheduleTaskReminder(cleanedTask);
       }
+      
       setIsFormOpen(false);
     } catch (error) {
       console.error('Add task error:', error);
-      setError('אירעה שגיאה בשמירת המשימה. אנא נסה שוב.');
+      setError(error instanceof Error ? error.message : 'אירעה שגיאה בשמירת המשימה');
     } finally {
       setIsLoading(false);
     }
@@ -199,23 +180,26 @@ const TaskManager: React.FC = () => {
     
     try {
       setIsLoading(true);
-      const updatedTask: Task = {
-        ...selectedTask,
-        ...taskData,
-        type: taskData.courtDate ? TaskType.HEARING : TaskType.REGULAR
-      };
+      setError(null);
 
-      if (taskData.reminderDate) {
+      const cleanedTask = cleanTaskForFirebase({
+        ...selectedTask,
+        ...taskData
+      });
+      validateTask(cleanedTask);
+
+      await firebaseService.updateTask(cleanedTask);
+      
+      if (cleanedTask.reminderDate) {
         const notificationService = NotificationService.getInstance();
-        await notificationService.scheduleTaskReminder(updatedTask);
+        await notificationService.scheduleTaskReminder(cleanedTask);
       }
 
-      await firebaseService.updateTask(updatedTask);
       setSelectedTask(null);
       setIsFormOpen(false);
     } catch (error) {
       console.error('Update task error:', error);
-      setError('אירעה שגיאה בעדכון המשימה. אנא נסה שוב.');
+      setError(error instanceof Error ? error.message : 'אירעה שגיאה בעדכון המשימה');
     } finally {
       setIsLoading(false);
     }
@@ -229,28 +213,30 @@ const TaskManager: React.FC = () => {
       const notificationService = NotificationService.getInstance();
       await notificationService.cancelTaskReminder(id);
       await firebaseService.deleteTask(id);
+      setError(null);
     } catch (error) {
       console.error('Delete task error:', error);
-      setError('אירעה שגיאה במחיקת המשימה. אנא נסה שוב.');
+      setError('אירעה שגיאה במחיקת המשימה');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleBackup = () => {
+  // Backup & Restore Functions
+  const handleBackup = async () => {
     try {
       const dataStr = JSON.stringify(tasks);
       const dataUri = `data:application/json;charset=utf-8,${encodeURIComponent(dataStr)}`;
       
       const link = document.createElement('a');
-      link.setAttribute('href', dataUri);
-      link.setAttribute('download', `tasks-backup-${format(new Date(), 'yyyy-MM-dd')}.json`);
+      link.href = dataUri;
+      link.download = `tasks-backup-${format(new Date(), 'yyyy-MM-dd')}.json`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
     } catch (error) {
       console.error('Backup error:', error);
-      setError('אירעה שגיאה בגיבוי המשימות. אנא נסה שוב.');
+      setError('אירעה שגיאה בגיבוי המשימות');
     }
   };
 
@@ -272,10 +258,11 @@ const TaskManager: React.FC = () => {
             setIsLoading(true);
             await firebaseService.clearAllTasks();
             await Promise.all(backupData.map(task => firebaseService.saveTask(task)));
+            setError(null);
           }
         } catch (error) {
           console.error('Restore error:', error);
-          setError('אירעה שגיאה בשחזור הגיבוי. אנא ודא שהקובץ תקין.');
+          setError('אירעה שגיאה בשחזור הגיבוי');
         } finally {
           setIsLoading(false);
         }
@@ -284,22 +271,20 @@ const TaskManager: React.FC = () => {
       input.click();
     } catch (error) {
       console.error('Restore init error:', error);
-      setError('אירעה שגיאה בתהליך השחזור. אנא נסה שוב.');
+      setError('אירעה שגיאה בתהליך השחזור');
     }
   };
-
-  // חלק 4
 
   // Filter and sort tasks
   const filteredTasks = tasks
     .filter(task => {
-      if (searchQuery === '') return true;
+      if (!searchQuery) return true;
       const searchLower = searchQuery.toLowerCase();
       return (
         task.taskName.toLowerCase().includes(searchLower) || 
         task.clientName.toLowerCase().includes(searchLower) ||
-        (task?.court && task.court.toLowerCase().includes(searchLower)) ||
-        (task?.judge && task.judge.toLowerCase().includes(searchLower))
+        (task.court?.toLowerCase().includes(searchLower)) ||
+        (task.judge?.toLowerCase().includes(searchLower))
       );
     })
     .filter(task => activeTab === 'completed' ? task.completed : !task.completed)
@@ -309,9 +294,8 @@ const TaskManager: React.FC = () => {
     <div className="max-w-4xl mx-auto p-2 sm:p-4" dir="rtl">
       <h1 className="text-2xl font-bold mb-6 text-center">מנהל משימות</h1>
       
-      {/* Top Bar with Search and Actions */}
+      {/* Top Bar */}
       <div className="mb-4 flex flex-wrap gap-2 sm:gap-4 items-center">
-        {/* Right - Add Task */}
         <Button
           onClick={() => {
             setSelectedTask(null);
@@ -325,7 +309,6 @@ const TaskManager: React.FC = () => {
           <Plus size={20} />
         </Button>
 
-        {/* Center - Search */}
         <div className="flex-1 relative min-w-[200px]">
           <Input
             placeholder="חיפוש משימות..."
@@ -336,7 +319,6 @@ const TaskManager: React.FC = () => {
           <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
         </div>
 
-        {/* Left - Backup/Restore */}
         <div className="flex gap-2">
           <Button
             onClick={handleBackup}
@@ -375,7 +357,8 @@ const TaskManager: React.FC = () => {
         >
           משימות פעילות
         </Button>
-      </div>
+
+        </div>
 
       {/* Error Messages */}
       {(error || isError) && (
@@ -418,12 +401,13 @@ const TaskManager: React.FC = () => {
           <div className="space-y-4">
             {filteredTasks.map(task => (
               <TaskCard 
-                key={task.id} 
+                key={task.id}
                 task={task}
                 onToggleComplete={async () => {
                   try {
                     await firebaseService.updateTaskStatus(task.id, !task.completed);
                   } catch (error) {
+                    console.error('Toggle status error:', error);
                     setError('אירעה שגיאה בעדכון סטטוס המשימה');
                   }
                 }}
@@ -443,7 +427,7 @@ const TaskManager: React.FC = () => {
         )}
       </div>
 
-      {/* Task Form Dialog */}
+      {/* Form Dialog */}
       {isFormOpen && (
         <TaskFormDialog
           open={isFormOpen}
@@ -453,9 +437,9 @@ const TaskManager: React.FC = () => {
           }}
           onSubmit={async (taskData) => {
             if (selectedTask) {
-              await handleUpdateTask(taskData as TaskInput);
+              await handleUpdateTask(taskData);
             } else {
-              await handleAddTask(taskData as TaskInput);
+              await handleAddTask(taskData);
             }
           }}
           initialTask={selectedTask}

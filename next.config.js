@@ -1,8 +1,17 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {
+const withPWA = require('next-pwa')({
+  dest: 'public',
+  register: true,
+  skipWaiting: true,
+  disable: process.env.NODE_ENV === 'development',
+  buildExcludes: [/middleware-manifest\.json$/],
+  publicExcludes: ['!workbox-*.js', '!sw.js'],
+});
+
+const config = {
   reactStrictMode: true,
   swcMinify: true,
-  output: 'standalone',
+  poweredByHeader: false,
   async headers() {
     return [
       {
@@ -19,6 +28,15 @@ const nextConfig = {
         ],
       },
       {
+        source: '/workbox-:hash.js',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          }
+        ],
+      },
+      {
         source: '/manifest.json',
         headers: [
           {
@@ -31,12 +49,8 @@ const nextConfig = {
         source: '/:path*',
         headers: [
           {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
-          },
-          {
-            key: 'X-Frame-Options',
-            value: 'DENY',
+            key: 'Cache-Control',
+            value: 'public, max-age=0, must-revalidate',
           }
         ],
       }
@@ -56,4 +70,4 @@ const nextConfig = {
   }
 };
 
-module.exports = nextConfig;
+module.exports = withPWA(config);

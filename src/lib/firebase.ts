@@ -1,88 +1,134 @@
-import { initializeApp } from 'firebase/app';
-import { getDatabase, ref, onValue, set, update, remove } from 'firebase/database';
+import { initializeApp, FirebaseApp } from 'firebase/app';
+import { getDatabase, ref, onValue, set, update, remove, Database, DatabaseReference, Unsubscribe } from 'firebase/database';
 import { Task } from '@/types/task';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyC6tF1s_LZojVTH7R9F1eE8dINA3pDR1vU",
-  authDomain: "taskmanager-new.firebaseapp.com",
-  databaseURL: "https://taskmanager-new-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "taskmanager-new",
-  storageBucket: "taskmanager-new.firebasestorage.app",
-  messagingSenderId: "601027888354",
-  appId: "1:601027888354:web:5f388a5257ac59a5be8abb"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
-let app;
-try {
-  app = initializeApp(firebaseConfig);
-} catch (error) {
-  if (!/already exists/.test((error as Error).message)) {
-    console.error('Firebase initialization error:', error);
-    throw error;
-  }
-  app = initializeApp(firebaseConfig, 'taskmanager-new');
+if (!firebaseConfig.databaseURL || !firebaseConfig.apiKey) {
+  throw new Error('Missing required Firebase configuration');
 }
 
-const db = getDatabase(app);
+class FirebaseService {
+  private app: FirebaseApp;
+  private db: Database;
+  private static instance: FirebaseService;
 
-export const firebaseService = {
-  testConnection: async () => {
-    const connRef = ref(db, '.info/connected');
+  private constructor() {
+    try {
+      this.app = initializeApp(firebaseConfig);
+      this.db = getDatabase(this.app);
+      console.log('Firebase initialized successfully');
+    } catch (error) {
+      if (error instanceof Error && !/already exists/.test(error.message)) {
+        console.error('Firebase initialization error:', error);
+        throw error;
+      }
+      this.app = initializeApp(firebaseConfig, 'taskmanager-new');
+      this.db = getDatabase(this.app);
+    }
+  }
+
+  public static getInstance(): FirebaseService {
+    if (!FirebaseService.instance) {
+      FirebaseService.instance = new FirebaseService();
+    }
+    return FirebaseService.instance;
+  }
+
+  private getRef(path: string): DatabaseReference {
+    return ref(this.db, path);
+  }
+
+  public testConnection = async (): Promise<boolean> => {
     return new Promise((resolve, reject) => {
-      onValue(connRef, (snap) => {
-        if (snap.val() === true) {
+      const handleConnection = (snapshot: any) => {
+        const isConnected = snapshot.val() === true;
+        if (isConnected) {
           resolve(true);
         } else {
-          reject(new Error('No connection'));
+          reject(new Error('No connection to Firebase'));
         }
-      });
+      };
+
+      const handleError = (error: Error) => {
+        reject(error);
+      };
+
+      onValue(this.getRef('.info/connected'), handleConnection, handleError);
     });
-  },
+  };
 
-  onTasksChange: (onData: (tasks: Task[]) => void, onError: (error: Error) => void) => {
-    const tasksRef = ref(db, 'tasks');
+  public onTasksChange = (onData: (tasks: Task[]) => void, onError: (error: Error) => void): Unsubscribe => {
+    const handleSnapshot = (snapshot: any) => {
+      try {
+        const tasks: Task[] = [];
+        snapshot.forEach((childSnapshot: any) => {
+          const task = childSnapshot.val() as Task | null;
+          if (task?.id) {
+            tasks.push(task);
+          }
+        });
+        onData(tasks);
+      } catch (error) {
+        onError(error instanceof Error ? error : new Error('Error processing tasks'));
+      }
+    };
+
+    return onValue(this.getRef('tasks'), handleSnapshot, onError);
+  };
+
+  public saveTask = async (task: Task): Promise<void> => {
     try {
-      const unsubscribe = onValue(tasksRef,
-        (snapshot) => {
-          const tasks: Task[] = [];
-          snapshot.forEach((childSnapshot) => {
-            if (childSnapshot.val()) {
-              tasks.push(childSnapshot.val());
-            }
-          });
-          onData(tasks);
-        },
-        (error) => onError(error)
-      );
-      return unsubscribe;
+      await set(this.getRef(`tasks/${task.id}`), task);
     } catch (error) {
-      onError(error as Error);
-      return () => {};
+      console.error('Save task error:', error);
+      throw error;
     }
-  },
+  };
 
-  saveTask: async (task: Task) => {
-    const taskRef = ref(db, `tasks/${task.id}`);
-    await set(taskRef, task);
-  },
+  public updateTask = async (task: Task): Promise<void> => {
+    try {
+      await update(this.getRef(`tasks/${task.id}`), task);
+    } catch (error) {
+      console.error('Update task error:', error);
+      throw error;
+    }
+  };
 
-  updateTask: async (task: Task) => {
-    const taskRef = ref(db, `tasks/${task.id}`);
-    await update(taskRef, task);
-  },
+  public deleteTask = async (id: number): Promise<void> => {
+    try {
+      await remove(this.getRef(`tasks/${id}`));
+    } catch (error) {
+      console.error('Delete task error:', error);
+      throw error;
+    }
+  };
 
-  deleteTask: async (id: number) => {
-    const taskRef = ref(db, `tasks/${id}`);
-    await remove(taskRef);
-  },
+  public updateTaskStatus = async (id: number, completed: boolean): Promise<void> => {
+    try {
+      await update(this.getRef(`tasks/${id}`), { completed });
+    } catch (error) {
+      console.error('Update task status error:', error);
+      throw error;
+    }
+  };
 
-  updateTaskStatus: async (id: number, completed: boolean) => {
-    const taskRef = ref(db, `tasks/${id}`);
-    await update(taskRef, { completed });
-  },
+  public clearAllTasks = async (): Promise<void> => {
+    try {
+      await remove(this.getRef('tasks'));
+    } catch (error) {
+      console.error('Clear all tasks error:', error);
+      throw error;
+    }
+  };
+}
 
-  clearAllTasks: async () => {
-    const tasksRef = ref(db, 'tasks');
-    await remove(tasksRef);
-  }
-};
+export const firebaseService = FirebaseService.getInstance();
