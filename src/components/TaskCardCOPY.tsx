@@ -1,6 +1,6 @@
 import React from 'react';
 import { Task } from '@/types/task';
-import { Edit2, Trash2, CheckCircle, Bell, Calendar } from 'lucide-react';
+import { Edit2, Trash2, CheckCircle, Bell } from 'lucide-react';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -57,37 +57,6 @@ const TaskCard: React.FC<TaskCardProps> = ({
     return 'border-gray-200';
   };
 
-  const exportToCalendar = () => {
-    const startDate = task.courtDate || task.dueDate;
-    const endDate = new Date(new Date(startDate).getTime() + 60 * 60 * 1000); // Add 1 hour
-
-    const description = [
-      task.clientName,
-      task.court ? `בית משפט: ${task.court}` : '',
-      task.judge ? `שופט: ${task.judge}` : ''
-    ].filter(Boolean).join('\\n');
-
-    const event = [
-      'BEGIN:VCALENDAR',
-      'VERSION:2.0',
-      'BEGIN:VEVENT',
-      `DTSTART:${new Date(startDate).toISOString().replace(/[-:]/g, '').split('.')[0]}Z`,
-      `DTEND:${endDate.toISOString().replace(/[-:]/g, '').split('.')[0]}Z`,
-      `SUMMARY:${task.taskName}`,
-      `DESCRIPTION:${description}`,
-      'END:VEVENT',
-      'END:VCALENDAR'
-    ].join('\n');
-
-    const blob = new Blob([event], { type: 'text/calendar;charset=utf-8' });
-    const link = document.createElement('a');
-    link.href = window.URL.createObjectURL(blob);
-    link.download = `${task.taskName}.ics`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   return (
     <div className={cn(
       "border-2 rounded-lg p-4 relative",
@@ -125,14 +94,6 @@ const TaskCard: React.FC<TaskCardProps> = ({
         </div>
 
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={exportToCalendar}
-            title="הוסף ליומן"
-          >
-            <Calendar className="text-orange-500" />
-          </Button>
           <Button
             variant="outline"
             size="icon"
