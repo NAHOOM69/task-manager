@@ -33,6 +33,28 @@ const formatDateTime = (dateString: string) => {
   }
 };
 
+const getDaysLeft = (dateString: string) => {
+  try {
+    const dueDate = new Date(dateString);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    dueDate.setHours(0, 0, 0, 0);
+    
+    const diffTime = dueDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return 'היום';
+    if (diffDays === 1) return 'מחר';
+    if (diffDays === -1) return 'אתמול';
+    
+    return diffDays > 0 ? 
+      `עוד ${diffDays} ימים` : 
+      `${Math.abs(diffDays)} ימים באיחור`;
+  } catch {
+    return '';
+  }
+};
+
 const TaskCard: React.FC<TaskCardProps> = ({
   task,
   onToggleComplete,
@@ -102,7 +124,15 @@ const TaskCard: React.FC<TaskCardProps> = ({
           <div className="mt-2 space-y-1">
             <p className="text-sm text-gray-500">
               {task.dueDate && (
-                <span>תאריך יעד: {formatDate(task.dueDate)}</span>
+                <span className="flex items-center gap-2">
+                  תאריך יעד: {formatDate(task.dueDate)}
+                  <span className={cn(
+                    "font-medium",
+                    new Date(task.dueDate) < new Date() ? "text-red-500" : "text-green-500"
+                  )}>
+                    ({getDaysLeft(task.dueDate)})
+                  </span>
+                </span>
               )}
             </p>
             {task.reminderDate && (
