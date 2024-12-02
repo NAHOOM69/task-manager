@@ -1,8 +1,9 @@
-// TaskCard.tsx
 import React from 'react';
 import { Task } from '@/types/task';
-import { CheckCircle, Edit2, Trash2, Calendar, Bell, Building2, User } from 'lucide-react';
-import { Button } from "@/components/ui/button";
+import { Edit2, Trash2, CheckCircle } from 'lucide-react';
+import { formatDateForDevice } from '@/lib/utils';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 interface TaskCardProps {
   task: Task;
@@ -11,69 +12,69 @@ interface TaskCardProps {
   onDelete: () => void;
 }
 
-const TaskCard: React.FC<TaskCardProps> = ({ task, onToggleComplete, onEdit, onDelete }) => {
-  const isOverdue = !task.completed && new Date(task.dueDate) < new Date();
-  
-  console.log('Rendering task:', task); // Debug log
+const TaskCard: React.FC<TaskCardProps> = ({
+  task,
+  onToggleComplete,
+  onEdit,
+  onDelete
+}) => {
+  const isOverdue = new Date(task.dueDate) < new Date() && !task.completed;
 
   return (
-    <div className={`bg-white rounded-lg shadow-md p-4 mb-4 ${task.completed ? 'opacity-70' : ''} 
-      ${task.type === 'hearing' ? 'border-r-4 border-blue-500' : ''}
-      ${isOverdue ? 'border border-red-500' : ''}`}>
-      
-      <div className="flex justify-between items-start">
+    <div className={cn(
+      "border rounded-lg p-4 relative",
+      task.completed ? "bg-gray-50" : "bg-white",
+      isOverdue && !task.completed ? "border-red-300" : "border-gray-200"
+    )}>
+      <div className="flex justify-between items-start gap-4">
         <div className="flex-1">
-          <h3 className="font-bold text-lg mb-1">{task.taskName}</h3>
-          <p className="text-gray-600 mb-2">{task.clientName}</p>
+          {/* שם הלקוח כותרת ראשית */}
+          <h3 className="font-semibold text-lg mb-1">{task.clientName}</h3>
+          {/* שם המשימה מתחת */}
+          <p className="text-gray-600">{task.taskName}</p>
           
-          <div className="flex items-center text-sm text-gray-500 mb-2">
-            <Calendar className="h-4 w-4 ml-1" />
-            {new Date(task.dueDate).toLocaleDateString('he-IL')}
+          <div className="mt-2 text-sm text-gray-500">
+            <p>תאריך יעד: {formatDateForDevice(task.dueDate)}</p>
+            {task.courtDate && (
+              <p>תאריך דיון: {formatDateForDevice(task.courtDate)}</p>
+            )}
           </div>
-          
-          {task.type === 'hearing' && (
-            <div className="mt-2 p-2 bg-gray-50 rounded">
-              {task.court && (
-                <div className="flex items-center mb-1">
-                  <Building2 className="h-4 w-4 ml-1" />
-                  <span>{task.court}</span>
-                </div>
-              )}
-              {task.judge && (
-                <div className="flex items-center mb-1">
-                  <User className="h-4 w-4 ml-1" />
-                  <span>{task.judge}</span>
-                </div>
-              )}
-            </div>
+          {task.court && (
+            <p className="text-sm text-gray-600 mt-1">
+              {task.court} {task.judge ? `- ${task.judge}` : ''}
+            </p>
           )}
         </div>
 
-        <div className="flex flex-col gap-2">
-          <Button 
-            variant="ghost" 
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
             size="icon"
             onClick={onToggleComplete}
-            className={task.completed ? 'text-green-500' : 'text-gray-400'}
+            title={task.completed ? 'סמן כלא הושלם' : 'סמן כהושלם'}
           >
-            <CheckCircle className="h-5 w-5" />
+            <CheckCircle
+              className={cn(
+                "transition-colors",
+                task.completed ? "text-green-500" : "text-gray-300"
+              )}
+            />
           </Button>
-          
           <Button
-            variant="ghost"
+            variant="outline"
             size="icon"
             onClick={onEdit}
+            title="ערוך משימה"
           >
-            <Edit2 className="h-5 w-5" />
+            <Edit2 className="text-blue-500" />
           </Button>
-          
           <Button
-            variant="ghost"
+            variant="outline"
             size="icon"
             onClick={onDelete}
-            className="text-red-500"
+            title="מחק משימה"
           >
-            <Trash2 className="h-5 w-5" />
+            <Trash2 className="text-red-500" />
           </Button>
         </div>
       </div>
