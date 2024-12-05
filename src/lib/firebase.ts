@@ -10,6 +10,10 @@ import {
   onValue, // ייבוא onValue
 } from "firebase/database";
 
+
+export { app };
+
+
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -23,6 +27,9 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
+
+export { database };
+
 
 export const firebaseService = {
   // פונקציה לקבלת כל המשימות
@@ -71,6 +78,11 @@ export const firebaseService = {
   async deleteCase(caseId: string) {
     const caseRef = ref(database, `cases/${caseId}`);
     await remove(caseRef);
+  },
+
+  async updateTaskStatus(taskId: string, newStatus: boolean): Promise<void> {
+    const taskRef = ref(database, `tasks/${taskId}`);
+    await update(taskRef, { completed: newStatus });
   },
 
   // מאזין לשינויים במשימות

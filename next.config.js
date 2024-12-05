@@ -54,6 +54,12 @@ const nextConfig = {
     ];
   },
 
+
+  experimental: {
+    appDir: true, // הפעלת App Router
+  },
+
+
   // פתרון לבעיות חבילות בקוד לקוח
   webpack: (config, { isServer }) => {
     if (!isServer) {
@@ -68,5 +74,8 @@ const nextConfig = {
     return config;
   },
 };
+
+
+
 
 module.exports = withPWA(nextConfig);

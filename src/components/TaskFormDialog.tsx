@@ -266,7 +266,7 @@ const TaskFormDialog: React.FC<TaskFormDialogProps> = ({
             </Button>
             <Button type="submit" disabled={isSubmitting}>
             <Save width={18} height={18} /> className="ml-2" /
-              {isSubmitting ? 'שומר...' : initialTask ? 'עדכן משימה' : 'צור משימה'}
+            {isSubmitting ? 'טוען...' : initialTask ? 'עדכון משימה' : 'יצירת משימה'}
             </Button>
           </div>
         </form>

@@ -65,27 +65,29 @@ const TaskManager: React.FC = () => {
 
   useEffect(() => {
     setIsLoading(true);
-    const unsubscribeTasks = firebaseService.onTasksChange(
-      (updatedTasks) => {
+  
+    try {
+      const unsubscribeTasks = firebaseService.onTasksChange((updatedTasks) => {
         setTasks(updatedTasks);
         setIsLoading(false);
-      },
-      (error) => {
-        setError('אירעה שגיאה בטעינת המשימות. אנא נסה שוב מאוחר יותר.');
-        setIsLoading(false);
-      }
-    );
-
-    const unsubscribeCases = firebaseService.onCasesChange((updatedCases) => {
-      setCases(updatedCases);
-    });
-
-    return () => {
-      unsubscribeTasks();
-      unsubscribeCases();
-    };
+      });
+  
+      const unsubscribeCases = firebaseService.onCasesChange((updatedCases) => {
+        setCases(updatedCases);
+      });
+  
+      return () => {
+        unsubscribeTasks();
+        unsubscribeCases();
+      };
+    } catch (error: any) {
+      setError(`אירעה שגיאה כללית: ${error.message}`);
+      setIsLoading(false);
+    }
   }, []);
-
+  
+  
+  
   const handleAddTask = async (taskData: TaskInput) => {
     if (!taskData.clientName || !taskData.taskName || !taskData.dueDate) {
       setError('יש למלא את כל שדות החובה');
@@ -111,14 +113,18 @@ const TaskManager: React.FC = () => {
 
   const handleUpdateTask = async (taskData: TaskInput) => {
     if (!selectedTask) return;
-    
+  
     try {
       setIsLoading(true);
       const updatedTask: Task = {
         ...selectedTask,
-        ...taskData
+        ...taskData,
       };
-      await firebaseService.updateTask(updatedTask);
+  
+      // יש לוודא שמועברים שני פרמטרים: מזהה המשימה והמידע המעודכן
+      await firebaseService.updateTask(String(selectedTask.id), updatedTask);
+
+  
       setSelectedTask(null);
       setIsFormOpen(false);
     } catch (error) {
@@ -127,13 +133,14 @@ const TaskManager: React.FC = () => {
       setIsLoading(false);
     }
   };
+  
 
   const handleDeleteTask = async (id: number) => {
     if (!window.confirm('האם אתה בטוח שברצונך למחוק את המשימה?')) return;
     
     try {
       setIsLoading(true);
-      await firebaseService.deleteTask(id);
+      await firebaseService.deleteTask(String(id));
     } catch (error) {
       setError('אירעה שגיאה במחיקת המשימה. אנא נסה שוב.');
     } finally {
@@ -148,9 +155,9 @@ const TaskManager: React.FC = () => {
     try {
       setIsLoading(true);
       const newStatus = !task.completed;
-      await firebaseService.updateTaskStatus(id, newStatus);
+      await firebaseService.updateTaskStatus(id.toString(), newStatus);
     } catch (error) {
-      setError(`אירעה שגיאה ב${task.completed ? 'ביטול' : 'סימון'} המשימה כהושלמה. אנא נסה שוב.`);
+      setError("אירעה שגיאה ב" + (task.completed ? "ביטול" : "סימון") + " המשימה כהושלמה.");
     } finally {
       setIsLoading(false);
     }
