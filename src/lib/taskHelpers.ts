@@ -1,4 +1,4 @@
-import { Task, TaskType } from '@/types/task';
+import { Task, TaskType } from '@/Types/Task';
 
 export const cleanTaskForFirebase = (task: Partial<Task>): Task => {
   if (!task) {

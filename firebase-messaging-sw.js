@@ -3,14 +3,14 @@ importScripts('https://www.gstatic.com/firebasejs/9.17.2/firebase-messaging.js')
 
 // הגדרות Firebase
 firebase.initializeApp({
-  apiKey: "AIzaSyAPB7BtGlY2-7m5TaIpoz4duC1Yv7IEGNU",
-  authDomain: "task-manager181124.firebaseapp.com",
-  databaseURL: "https://task-manager181124-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "task-manager181124",
-  storageBucket: "task-manager181124.firebaseapp.com",
-  messagingSenderId: "212734040741",
-  appId: "1:212734040741:web:fc416a1ff480bb255d0b4c",
-  measurementId: "G-ED32K3SGXQ"
+  apiKey: "AIzaSyB2SJKGRQCkbW81Lz0tYs0UKZM513FBKCA",
+  authDomain: "task-casemanager-8f46a.firebaseapp.com",
+  databaseURL: "https://casemanager-8f46a-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "casemanager-8f46a",
+  storageBucket: "casemanager-8f46a.firebasestorage.app",
+  messagingSenderId: "815557692421",
+  appId: "1:815557692421:web:85c9b8cd6f3623e43e206c",
+  measurementId: "G-1G4FYK8M86"
 });
 
 const messaging = firebase.messaging();

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Task } from '@/types/task';
+import { Task } from '@/Types/Task';
 import { Edit2, Trash2, CheckCircle, Bell, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -137,7 +137,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
             </p>
             {task.reminderDate && (
               <p className="text-sm text-gray-500 flex items-center gap-1">
-                <Bell size={14} className="text-blue-500" />
+                <Bell width={18} height={18} className="text-blue-500" />
                 תזכורת: {formatDateTime(task.reminderDate)}
               </p>
             )}

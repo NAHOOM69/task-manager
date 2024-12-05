@@ -5,7 +5,7 @@
   "categories": ["productivity", "legal", "business"],
   "lang": "he-IL",
   "dir": "rtl",
-  "start_url": "/?source=pwa",
+  "start_url": "/cases",
   "scope": "/",
   "display": "standalone",
   "display_override": ["standalone"],
@@ -32,20 +32,27 @@
       "purpose": "maskable"
     }
   ],
-  "shortcuts": [
-    {
-      "name": "הוסף משימה",
-      "url": "/?action=new",
-      "description": "יצירת משימה חדשה",
-      "icons": [{ "src": "/icons/icon-144x144.png", "sizes": "144x144" }]
-    },
-    {
-      "name": "משימות פעילות",
-      "url": "/?tab=active",
-      "description": "הצג משימות פעילות",
-      "icons": [{ "src": "/icons/icon-144x144.png", "sizes": "144x144" }]
-    }
-  ],
-  "related_applications": [],
+
+ "shortcuts": [
+  {
+    "name": "ניהול תיקים",
+    "url": "/cases",
+    "description": "ניהול תיקים",
+    "icons": [{ "src": "/icons/icon-144x144.png", "sizes": "144x144" }]
+  },
+  {
+    "name": "הוסף משימה",
+    "url": "/?action=new",
+    "description": "יצירת משימה חדשה",
+    "icons": [{ "src": "/icons/icon-144x144.png", "sizes": "144x144" }]
+  },
+  {
+    "name": "משימות פעילות",
+    "url": "/?tab=active",
+    "description": "הצג משימות פעילות",
+    "icons": [{ "src": "/icons/icon-144x144.png", "sizes": "144x144" }]
+  }
+],
+
   "prefer_related_applications": false
 }

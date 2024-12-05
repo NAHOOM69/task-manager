@@ -1,5 +1,5 @@
 import { getDatabase, ref, update } from 'firebase/database';
-import { Task } from '@/types/task';
+import { Task } from '@/Types/Task';
 
 export class NotificationService {
   private static instance: NotificationService;

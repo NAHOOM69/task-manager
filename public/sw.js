@@ -1,1 +1,107 @@
-if(!self.define){let e,s={};const n=(n,a)=>(n=new URL(n+".js",a).href,s[n]||new Promise((s=>{if("document"in self){const e=document.createElement("script");e.src=n,e.onload=s,document.head.appendChild(e)}else e=n,importScripts(n),s()})).then((()=>{let e=s[n];if(!e)throw new Error(`Module ${n} didn’t register its module`);return e})));self.define=(a,i)=>{const t=e||("document"in self?document.currentScript.src:"")||location.href;if(s[t])return;let c={};const r=e=>n(e,t),f={module:{uri:t},exports:c,require:r};s[t]=Promise.all(a.map((e=>f[e]||r(e)))).then((e=>(i(...e),c)))}}define(["./workbox-4754cb34"],(function(e){"use strict";importScripts(),self.skipWaiting(),e.clientsClaim(),e.precacheAndRoute([{url:"/_next/app-build-manifest.json",revision:"cfa920d62ef3c222f3022f0b818868b5"},{url:"/_next/static/9P2hN6g98f_rgPyRhbVh0/_buildManifest.js",revision:"c155cce658e53418dec34664328b51ac"},{url:"/_next/static/9P2hN6g98f_rgPyRhbVh0/_ssgManifest.js",revision:"b6652df95db52feb4daf4eca35380933"},{url:"/_next/static/chunks/117-d66144233b4af092.js",revision:"9P2hN6g98f_rgPyRhbVh0"},{url:"/_next/static/chunks/457b8330.b96004530b2d0898.js",revision:"b96004530b2d0898"},{url:"/_next/static/chunks/712.f9a0f35320999432.js",revision:"f9a0f35320999432"},{url:"/_next/static/chunks/925.67207398d7e4b084.js",revision:"67207398d7e4b084"},{url:"/_next/static/chunks/app/_not-found/page-6327926068f87af9.js",revision:"9P2hN6g98f_rgPyRhbVh0"},{url:"/_next/static/chunks/app/layout-1164ca6f3250c3fd.js",revision:"9P2hN6g98f_rgPyRhbVh0"},{url:"/_next/static/chunks/app/page-9bfdb7eb0bd31da8.js",revision:"9P2hN6g98f_rgPyRhbVh0"},{url:"/_next/static/chunks/fd9d1056-b88f8a4cc02eef8b.js",revision:"9P2hN6g98f_rgPyRhbVh0"},{url:"/_next/static/chunks/framework-aec844d2ccbe7592.js",revision:"9P2hN6g98f_rgPyRhbVh0"},{url:"/_next/static/chunks/main-app-4b5e15b65ef50607.js",revision:"9P2hN6g98f_rgPyRhbVh0"},{url:"/_next/static/chunks/main-f0e939aeba08a1c4.js",revision:"9P2hN6g98f_rgPyRhbVh0"},{url:"/_next/static/chunks/pages/_app-72b849fbd24ac258.js",revision:"9P2hN6g98f_rgPyRhbVh0"},{url:"/_next/static/chunks/pages/_error-7ba65e1336b92748.js",revision:"9P2hN6g98f_rgPyRhbVh0"},{url:"/_next/static/chunks/polyfills-42372ed130431b0a.js",revision:"846118c33b2c0e922d7b3a7676f81f6f"},{url:"/_next/static/chunks/webpack-854932ff6e52e7f6.js",revision:"9P2hN6g98f_rgPyRhbVh0"},{url:"/_next/static/css/cf1a278cffa8f839.css",revision:"cf1a278cffa8f839"},{url:"/_next/static/media/26a46d62cd723877-s.woff2",revision:"befd9c0fdfa3d8a645d5f95717ed6420"},{url:"/_next/static/media/55c55f0601d81cf3-s.woff2",revision:"43828e14271c77b87e3ed582dbff9f74"},{url:"/_next/static/media/581909926a08bbc8-s.woff2",revision:"f0b86e7c24f455280b8df606b89af891"},{url:"/_next/static/media/6d93bde91c0c2823-s.woff2",revision:"621a07228c8ccbfd647918f1021b4868"},{url:"/_next/static/media/97e0cb1ae144a2a9-s.woff2",revision:"e360c61c5bd8d90639fd4503c829c2dc"},{url:"/_next/static/media/a34f9d1faa5f3315-s.p.woff2",revision:"d4fe31e6a2aebc06b8d6e558c9141119"},{url:"/_next/static/media/df0a9ae256c0569c-s.woff2",revision:"d54db44de5ccb18886ece2fda72bdfe0"},{url:"/file.svg",revision:"d09f95206c3fa0bb9bd9fefabfd0ea71"},{url:"/firebase-messaging-sw.js",revision:"5c0e3012dce585d8e3bd18fe250f5ee3"},{url:"/globe.svg",revision:"2aaafa6a49b6563925fe440891e32717"},{url:"/icons/icon-144x144.png",revision:"01392b02b9f6a6f35866dfaa13fc42a1"},{url:"/icons/icon-192x192.png",revision:"f240383e3a8736c521a05cbfa36daf38"},{url:"/index.html",revision:"cda9713b80652fca783a1d25b069299b"},{url:"/manifest.json",revision:"362f39d22e2776daef7739a1a2c8b239"},{url:"/next.svg",revision:"8e061864f388b47f33a1c3780831193e"},{url:"/vercel.svg",revision:"c0af2f507b369b085b35ef4bbe3bcf1e"},{url:"/window.svg",revision:"a2760511c65806022ad20adf74370ff3"}],{ignoreURLParametersMatching:[]}),e.cleanupOutdatedCaches(),e.registerRoute("/",new e.NetworkFirst({cacheName:"start-url",plugins:[{cacheWillUpdate:async({request:e,response:s,event:n,state:a})=>s&&"opaqueredirect"===s.type?new Response(s.body,{status:200,statusText:"OK",headers:s.headers}):s}]}),"GET"),e.registerRoute(/^https:\/\/fonts\.(?:gstatic)\.com\/.*/i,new e.CacheFirst({cacheName:"google-fonts-webfonts",plugins:[new e.ExpirationPlugin({maxEntries:4,maxAgeSeconds:31536e3})]}),"GET"),e.registerRoute(/^https:\/\/fonts\.(?:googleapis)\.com\/.*/i,new e.StaleWhileRevalidate({cacheName:"google-fonts-stylesheets",plugins:[new e.ExpirationPlugin({maxEntries:4,maxAgeSeconds:604800})]}),"GET"),e.registerRoute(/\.(?:eot|otf|ttc|ttf|woff|woff2|font.css)$/i,new e.StaleWhileRevalidate({cacheName:"static-font-assets",plugins:[new e.ExpirationPlugin({maxEntries:4,maxAgeSeconds:604800})]}),"GET"),e.registerRoute(/\.(?:jpg|jpeg|gif|png|svg|ico|webp)$/i,new e.StaleWhileRevalidate({cacheName:"static-image-assets",plugins:[new e.ExpirationPlugin({maxEntries:64,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\/_next\/image\?url=.+$/i,new e.StaleWhileRevalidate({cacheName:"next-image",plugins:[new e.ExpirationPlugin({maxEntries:64,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:mp3|wav|ogg)$/i,new e.CacheFirst({cacheName:"static-audio-assets",plugins:[new e.RangeRequestsPlugin,new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:mp4)$/i,new e.CacheFirst({cacheName:"static-video-assets",plugins:[new e.RangeRequestsPlugin,new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:js)$/i,new e.StaleWhileRevalidate({cacheName:"static-js-assets",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:css|less)$/i,new e.StaleWhileRevalidate({cacheName:"static-style-assets",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\/_next\/data\/.+\/.+\.json$/i,new e.StaleWhileRevalidate({cacheName:"next-data",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:json|xml|csv)$/i,new e.NetworkFirst({cacheName:"static-data-assets",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute((({url:e})=>{if(!(self.origin===e.origin))return!1;const s=e.pathname;return!s.startsWith("/api/auth/")&&!!s.startsWith("/api/")}),new e.NetworkFirst({cacheName:"apis",networkTimeoutSeconds:10,plugins:[new e.ExpirationPlugin({maxEntries:16,maxAgeSeconds:86400})]}),"GET"),e.registerRoute((({url:e})=>{if(!(self.origin===e.origin))return!1;return!e.pathname.startsWith("/api/")}),new e.NetworkFirst({cacheName:"others",networkTimeoutSeconds:10,plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute((({url:e})=>!(self.origin===e.origin)),new e.NetworkFirst({cacheName:"cross-origin",networkTimeoutSeconds:10,plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:3600})]}),"GET")}));
+import { precacheAndRoute, cleanupOutdatedCaches } from "workbox-precaching";
+import { registerRoute } from "workbox-routing";
+import { NetworkFirst, StaleWhileRevalidate, CacheFirst } from "workbox-strategies";
+import { ExpirationPlugin } from "workbox-expiration";
+
+// מיד מבטל המתנה ל-Service Worker חדש
+self.skipWaiting();
+self.clientsClaim();
+
+// 1. Precache קבצים חשובים (מתווספים אוטומטית על ידי Workbox)
+// `self.__WB_MANIFEST` יוחלף אוטומטית ברשימת הקבצים שלך.
+precacheAndRoute(self.__WB_MANIFEST || []);
+
+// 2. מנקה קבצים ישנים בקאש
+cleanupOutdatedCaches();
+
+// 3. Caching של עמוד הבית ודפים חשובים (Network First)
+registerRoute(
+  "/",
+  new NetworkFirst({
+    cacheName: "start-url",
+    plugins: [
+      new ExpirationPlugin({
+        maxAgeSeconds: 24 * 60 * 60, // יום אחד
+        maxEntries: 10,
+      }),
+    ],
+  }),
+  "GET"
+);
+
+// 4. Caching של API (Network First עם Timeout)
+registerRoute(
+  ({ url }) => url.pathname.startsWith("/api/"),
+  new NetworkFirst({
+    cacheName: "api-cache",
+    networkTimeoutSeconds: 10, // נסה מהרשת, חכה 10 שניות
+    plugins: [
+      new ExpirationPlugin({
+        maxEntries: 50, // עד 50 בקשות API
+        maxAgeSeconds: 60 * 60, // שעה אחת
+      }),
+    ],
+  }),
+  "GET"
+);
+
+// 5. סטטיים כמו גופנים, CSS, תמונות (Cache First)
+registerRoute(
+  /\.(?:css|js|woff2|woff|ttf|eot|svg|jpg|jpeg|png|gif|webp)$/,
+  new CacheFirst({
+    cacheName: "static-assets",
+    plugins: [
+      new ExpirationPlugin({
+        maxEntries: 100, // עד 100 קבצים סטטיים
+        maxAgeSeconds: 7 * 24 * 60 * 60, // שבוע אחד
+      }),
+    ],
+  }),
+  "GET"
+);
+
+// 6. גיבוי לדפים נוספים (Stale While Revalidate)
+registerRoute(
+  ({ url }) => url.pathname.startsWith("/cases") || url.pathname.startsWith("/tasks"),
+  new StaleWhileRevalidate({
+    cacheName: "dynamic-pages",
+    plugins: [
+      new ExpirationPlugin({
+        maxEntries: 20,
+        maxAgeSeconds: 7 * 24 * 60 * 60, // שבוע
+      }),
+    ],
+  }),
+  "GET"
+);
+
+// 7. Caching של תמונות (Cache First עם תוקף מוגבל)
+registerRoute(
+  /\.(?:png|jpg|jpeg|svg|gif|webp)$/,
+  new CacheFirst({
+    cacheName: "image-cache",
+    plugins: [
+      new ExpirationPlugin({
+        maxEntries: 50, // עד 50 תמונות
+        maxAgeSeconds: 30 * 24 * 60 * 60, // 30 ימים
+      }),
+    ],
+  }),
+  "GET"
+);
+
+// 8. ניהול בקשות חוצות-מקור (Cross-Origin)
+registerRoute(
+  ({ url }) => url.origin !== self.location.origin,
+  new NetworkFirst({
+    cacheName: "cross-origin-cache",
+    plugins: [
+      new ExpirationPlugin({
+        maxEntries: 20,
+        maxAgeSeconds: 60 * 60, // שעה
+      }),
+    ],
+  }),
+  "GET"
+);
+

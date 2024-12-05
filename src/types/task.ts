@@ -1,7 +1,10 @@
+// src/Types/Task.ts
+//export type TaskType = 'hearing' | 'regular';
 
+// Types/Task.ts
 export enum TaskType {
-  HEARING = 'hearing',
-  REGULAR = 'regular'
+  REGULAR = 'regular',
+  HEARING = 'hearing'
 }
 
 export interface Task {
@@ -16,6 +19,7 @@ export interface Task {
   court?: string;
   judge?: string;
   type: TaskType;
+  caseId?: string;
 }
 
-export type TaskInput = Omit<Task, 'id' | 'completed' | 'notified'>;
+export interface TaskInput extends Omit<Task, 'id' | 'completed' | 'notified'> {}

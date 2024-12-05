@@ -1,5 +1,5 @@
 import React from 'react';
-import { Task } from '@/types/task';
+import { Task } from '@/Types/Task';
 import { Edit2, Trash2, CheckCircle, Bell } from 'lucide-react';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';

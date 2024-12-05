@@ -1,4 +1,7 @@
+'use client';
+
 import React, { useState } from 'react';
+
 import {
   AlertCircle,
   CalendarCheck,
@@ -18,18 +21,21 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Task, TaskInput, TaskType } from '@/types/task';
+import { Task, TaskInput, TaskType } from '@/Types/Task';
+import type { Case } from '@/Types/Case';
 
 interface TaskFormDialogProps {
+  initialTask: Task | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (taskData: TaskInput) => Promise<void>;
-  initialTask: Task | null;
+  cases: Case[];
 }
 
 const FormInput: React.FC<{
@@ -56,7 +62,7 @@ const FormInput: React.FC<{
     />
     {error && (
       <p className="text-sm text-red-500 flex items-center gap-1">
-        <AlertCircle size={16} />
+        <AlertCircle width={18} height={18} />
         {error}
       </p>
     )}
@@ -136,17 +142,18 @@ const TaskFormDialog: React.FC<TaskFormDialogProps> = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            {initialTask ? <FileSpreadsheet size={20} /> : <ListTodo size={20} />}
-            {initialTask ? 'עריכת משימה' : 'משימה חדשה'}
-          </DialogTitle>
-        </DialogHeader>
+
+      <DialogHeader>
+        <DialogTitle>{initialTask ? 'עריכת משימה' : 'משימה חדשה'}</DialogTitle>
+        <DialogDescription>
+         {initialTask ? 'ערוך את פרטי המשימה' : 'הזן את פרטי המשימה. שדות עם * הם חובה'}
+        </DialogDescription>
+      </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4" dir="rtl">
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
-              <ClipboardList size={18} />
+            <ClipboardList width={18} height={18} />
               סוג משימה
             </Label>
             <div className="flex gap-4">
@@ -181,7 +188,7 @@ const TaskFormDialog: React.FC<TaskFormDialogProps> = ({
             onChange={(value) => setFormData(prev => ({ ...prev, clientName: value }))}
             error={errors.clientName}
             required
-            icon={<UserCircle2 size={18} />}
+            icon={<UserCircle2 width={18} height={18} />}
           />
 
           <FormInput
@@ -190,7 +197,7 @@ const TaskFormDialog: React.FC<TaskFormDialogProps> = ({
             onChange={(value) => setFormData(prev => ({ ...prev, taskName: value }))}
             error={errors.taskName}
             required
-            icon={<ClipboardList size={18} />}
+            icon={<ClipboardList width={18} height={18} />}
           />
 
           <FormInput
@@ -200,7 +207,7 @@ const TaskFormDialog: React.FC<TaskFormDialogProps> = ({
             onChange={(value) => setFormData(prev => ({ ...prev, dueDate: value }))}
             error={errors.dueDate}
             required
-            icon={<CalendarCheck size={18} />}
+            icon={<CalendarCheck width={18} height={18} />}
           />
 
           <FormInput
@@ -208,13 +215,13 @@ const TaskFormDialog: React.FC<TaskFormDialogProps> = ({
             type="datetime-local"
             value={formData.reminderDate || ''}
             onChange={(value) => setFormData(prev => ({ ...prev, reminderDate: value }))}
-            icon={<Clock size={18} />}
+            icon={<Clock width={18} height={18} />}
           />
 
           {formData.type === TaskType.HEARING && (
             <div className="space-y-4 border-t pt-4">
               <h3 className="font-medium text-gray-900 flex items-center gap-2">
-                <Gavel size={18} />
+              <Gavel width={18} height={18} />
                 פרטי דיון
               </h3>
               
@@ -224,14 +231,14 @@ const TaskFormDialog: React.FC<TaskFormDialogProps> = ({
                 onChange={(value) => setFormData(prev => ({ ...prev, court: value }))}
                 error={errors.court}
                 required
-                icon={<Building2 size={18} />}
+                icon={<Building2 width={18} height={18} />}
               />
 
               <FormInput
                 label="שופט"
                 value={formData.judge || ''}
                 onChange={(value) => setFormData(prev => ({ ...prev, judge: value }))}
-                icon={<User size={18} />}
+                icon={<User width={18} height={18} />}
               />
 
               <FormInput
@@ -241,7 +248,7 @@ const TaskFormDialog: React.FC<TaskFormDialogProps> = ({
                 onChange={(value) => setFormData(prev => ({ ...prev, courtDate: value }))}
                 error={errors.courtDate}
                 required
-                icon={<CalendarCheck size={18} />}
+                icon={<CalendarCheck width={18} height={18} />}
               />
             </div>
           )}
@@ -254,11 +261,11 @@ const TaskFormDialog: React.FC<TaskFormDialogProps> = ({
 
           <div className="flex justify-end gap-3 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              <X size={18} className="ml-2" />
+            <X width={18} height={18} /> className="ml-2" /
               ביטול
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              <Save size={18} className="ml-2" />
+            <Save width={18} height={18} /> className="ml-2" /
               {isSubmitting ? 'שומר...' : initialTask ? 'עדכן משימה' : 'צור משימה'}
             </Button>
           </div>
