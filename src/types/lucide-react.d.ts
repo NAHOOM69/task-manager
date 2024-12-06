@@ -28,4 +28,8 @@ declare module 'lucide-react' {
   export const RotateCcw: React.FC<React.SVGProps<SVGSVGElement>>;
   export const Download: React.FC<React.SVGProps<SVGSVGElement>>;
   export const CalendarCheck2: React.FC<React.SVGProps<SVGSVGElement>>;
+  export const Edit: React.FC<React.SVGProps<SVGSVGElement>>;
+  export const User2: React.FC<React.SVGProps<SVGSVGElement>>;
+  export const Home: React.FC<React.SVGProps<SVGSVGElement>>;
+   
 }

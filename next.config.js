@@ -1,82 +1,21 @@
 /** @type {import('next').NextConfig} */
-const withPWA = require('next-pwa')({
-  dest: 'public',
-  register: true,
-  skipWaiting: true,
-  disable: process.env.NODE_ENV === 'development', // השבתת PWA במצב פיתוח
-  buildExcludes: [/middleware-manifest\.json$/],
-  publicExcludes: ['!workbox-*.js', '!sw.js'], // וידוא שלא מוחקים קבצי SW
-});
-
-/** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  poweredByHeader: false,
-  
-  // הפניה מדף הבית לנתיב /cases
-  async redirects() {
-    return [
-      {
-        source: '/',
-        destination: '/cases',
-        permanent: true, // הפניה קבועה
-      },
-    ];
-  },
-
-  // הגדרות כותרות HTTP עבור SW ומטמון
-  async headers() {
-    return [
-      {
-        source: '/sw.js',
-        headers: [
-          { key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' },
-          { key: 'Service-Worker-Allowed', value: '/' },
-        ],
-      },
-      {
-        source: '/workbox-:hash.js',
-        headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-        ],
-      },
-      {
-        source: '/manifest.json',
-        headers: [
-          { key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' },
-        ],
-      },
-      {
-        source: '/:path*',
-        headers: [
-          { key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' },
-        ],
-      },
-    ];
-  },
-
-
-  experimental: {
-  //  appDir: true, // הפעלת App Router
-  },
-
-
-  // פתרון לבעיות חבילות בקוד לקוח
-  webpack: (config, { isServer }) => {
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false,
-        net: false,
-        tls: false,
-        crypto: false,
-      };
-    }
+  webpack: (config) => {
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+    };
     return config;
   },
+  env: {
+    NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+    NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    NEXT_PUBLIC_FIREBASE_PROJECT_ID: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+    NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    NEXT_PUBLIC_FIREBASE_APP_ID: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
+  }
 };
 
-
-
 module.exports = nextConfig;
-module.exports = withPWA(nextConfig);

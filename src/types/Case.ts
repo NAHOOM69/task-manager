@@ -1,26 +1,23 @@
+// Case status types
+export type CaseStatus = 'active' | 'pending' | 'closed' | 'hold';
 
-// Types/case.ts
-export enum CaseType {
-  REGULAR = 'regular',
-  HEARING = 'hearing'
-}
-
-// types/case.ts
+// Main Case interface
 export interface Case {
   id: string;
   clientName: string;
   caseNumber: string;
   legalNumber: string;
   subject: string;
-  court?: string;
-  judge?: string;
-  nextHearing?: string;
-  status: 'active' | 'pending' | 'closed';
+  court: string;
+  judge: string;
+  nextHearing: string;
+  status: CaseStatus;
   clientPhone: string;
   clientEmail: string;
+  notes: string;       // הוספנו
   createdAt: string;
   updatedAt: string;
 }
 
-
-export interface CaseInput extends Omit<Case, 'id' | 'completed' | 'notified'> {}
+// Interface for creating a new case (without id and timestamps)
+export interface CaseInput extends Omit<Case, 'id' | 'createdAt' | 'updatedAt'> {}

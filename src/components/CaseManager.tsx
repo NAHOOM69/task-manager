@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { firebaseService } from '@/lib/firebase';
-import type { Case } from '@/Types/Case';
+import type { Case, CaseStatus } from '@/Types/Case';
 import {
   Plus,
   Trash2,
@@ -45,18 +45,22 @@ const CaseForm: React.FC<CaseFormProps> = ({
   isOpen,
   onClose,
   onSubmit,
+
+
 }) => {
   const [formData, setFormData] = useState<Partial<Case>>({
-    clientName: caseData?.clientName || '',
-    caseNumber: caseData?.caseNumber || '',
-    legalNumber: caseData?.legalNumber || '',
-    subject: caseData?.subject || '',
-    court: caseData?.court || '',
-    judge: caseData?.judge || '',
-    nextHearing: caseData?.nextHearing || '',
-    status: caseData?.status || 'active',
-    clientPhone: caseData?.clientPhone || '',
-    clientEmail: caseData?.clientEmail || '',
+  clientName: caseData?.clientName || '',
+  caseNumber: caseData?.caseNumber || '',
+  legalNumber: caseData?.legalNumber || '',
+  subject: caseData?.subject || '',
+  court: caseData?.court || '',
+  judge: caseData?.judge || '',
+  nextHearing: caseData?.nextHearing || '',
+  status: caseData?.status || 'active',
+  clientPhone: caseData?.clientPhone || '',
+  clientEmail: caseData?.clientEmail || '',
+  createdAt: caseData?.createdAt || new Date().toISOString(),
+  updatedAt: new Date().toISOString()
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -67,19 +71,20 @@ const CaseForm: React.FC<CaseFormProps> = ({
     }
 
     const caseToSave: Case = {
-      id: caseData?.id || Date.now().toString(),
-      clientName: formData.clientName,
-      caseNumber: formData.caseNumber,
+      id: typeof caseData?.id === 'string' ? caseData.id : new Date().toString(),
+      clientName: formData.clientName || '',
+      caseNumber: formData.caseNumber || '',
       legalNumber: formData.legalNumber || '',
-      subject: formData.subject,
-      court: formData.court,
-      judge: formData.judge,
-      nextHearing: formData.nextHearing,
-      status: formData.status as 'active' | 'pending' | 'closed',
+      subject: formData.subject || '',
+      court: formData.court || '',
+      judge: formData.judge || '',
+      nextHearing: formData.nextHearing || '',
+      status: formData.status as CaseStatus || 'active',
       clientPhone: formData.clientPhone || '',
       clientEmail: formData.clientEmail || '',
+      notes: formData.notes || '',        // הוספנו
       createdAt: caseData?.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
 
     await onSubmit(caseToSave);
