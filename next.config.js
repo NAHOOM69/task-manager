@@ -8,6 +8,7 @@ const withPWA = require('next-pwa')({
   publicExcludes: ['!workbox-*.js', '!sw.js'], // וידוא שלא מוחקים קבצי SW
 });
 
+/** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
@@ -56,7 +57,7 @@ const nextConfig = {
 
 
   experimental: {
-    appDir: true, // הפעלת App Router
+  //  appDir: true, // הפעלת App Router
   },
 
 
@@ -77,5 +78,5 @@ const nextConfig = {
 
 
 
-
+module.exports = nextConfig;
 module.exports = withPWA(nextConfig);

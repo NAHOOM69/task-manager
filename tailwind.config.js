@@ -3,6 +3,7 @@ module.exports = {
   content: [
     "./src/**/*.{js,ts,jsx,tsx}", // כולל כל הקבצים בתיקיית src
     "./public/index.html",        // כולל index.html (אם יש)
+    "./app/**/*.{js,jsx,ts,tsx}"
   ],
   theme: {
     extend: {
