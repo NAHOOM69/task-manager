@@ -1,14 +1,10 @@
-// src/Types/Task.ts
-//export type TaskType = 'hearing' | 'regular';
-
-// Types/Task.ts
 export enum TaskType {
   REGULAR = 'regular',
   HEARING = 'hearing'
 }
 
 export interface Task {
-  id: number;
+  id: string;            // שינוי מ-number ל-string
   clientName: string;
   taskName: string;
   dueDate: string;

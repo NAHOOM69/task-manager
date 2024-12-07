@@ -1,3 +1,4 @@
-
-  // src/Types/TaskType.ts
-export type TaskType = 'hearing' | 'regular';
+enum TaskType {
+  REGULAR = 'REGULAR',
+  HEARING = 'HEARING'
+}

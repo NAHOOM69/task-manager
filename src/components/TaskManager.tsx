@@ -98,7 +98,7 @@ const TaskManager: React.FC = () => {
       setIsLoading(true);
       const newTask: Task = {
         ...taskData,
-        id: Date.now(),
+        id: Date.now().toString(),  // במקום רק Date.now()
         completed: false,
         notified: false
       };
@@ -135,12 +135,12 @@ const TaskManager: React.FC = () => {
   };
   
 
-  const handleDeleteTask = async (id: number) => {
+  const handleDeleteTask = async (id: string) => {  // מקבל string
     if (!window.confirm('האם אתה בטוח שברצונך למחוק את המשימה?')) return;
     
     try {
       setIsLoading(true);
-      await firebaseService.deleteTask(String(id));
+      await firebaseService.deleteTask(id);  // מעביר את ה-string כמו שהוא
     } catch (error) {
       setError('אירעה שגיאה במחיקת המשימה. אנא נסה שוב.');
     } finally {
@@ -148,14 +148,14 @@ const TaskManager: React.FC = () => {
     }
   };
 
-  const handleToggleComplete = async (id: number) => {
+  const handleToggleComplete = async (id: string) => {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
-
+  
     try {
       setIsLoading(true);
       const newStatus = !task.completed;
-      await firebaseService.updateTaskStatus(id.toString(), newStatus);
+      await firebaseService.updateTaskStatus(id, newStatus);
     } catch (error) {
       setError("אירעה שגיאה ב" + (task.completed ? "ביטול" : "סימון") + " המשימה כהושלמה.");
     } finally {
@@ -251,10 +251,11 @@ const TaskManager: React.FC = () => {
             >
               <Edit2 width={20} height={20} className="text-gray-400 hover:text-blue-500" />
             </Button>
+
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => handleDeleteTask(task.id)}
+              onClick={() => handleDeleteTask(task.id)} 
               title="מחק משימה"
             >
               <Trash2 width={20} height={20} className="text-gray-400 hover:text-red-500" />

@@ -19,7 +19,7 @@ export const cleanTaskForFirebase = (task: Partial<Task>): Task => {
   };
 
   const cleanedTask: Task = {
-    id: task.id || Date.now(),
+    id: Date.now().toString(),
     clientName: task.clientName?.trim() || '',
     taskName: task.taskName?.trim() || '',
     dueDate: validateDateTime(task.dueDate),

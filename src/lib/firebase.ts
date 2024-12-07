@@ -7,12 +7,57 @@ import {
   get,
   update,
   remove,
-  onValue, // ייבוא onValue
+  onValue,
+  DatabaseReference,
+  DataSnapshot
 } from "firebase/database";
 
+// Define interfaces
+export interface Task {
+  id: string;
+  clientName: string;
+  taskName: string;
+  dueDate: string;
+  reminderDate?: string;
+  completed: boolean;
+  notified: boolean;
+  courtDate?: string;
+  court?: string;
+  judge?: string;
+  type: TaskType;
+  caseId?: string;
+}
 
-export { app };
+export interface Case {
+  id: string;
+  clientName: string;
+  caseNumber: string;
+  legalNumber: string;
+  subject: string;
+  court: string;
+  judge: string;
+  nextHearing: string;
+  status: CaseStatus;
+  clientPhone: string;
+  clientEmail: string;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
+export enum TaskType {
+  COURT = 'court',
+  MEETING = 'meeting',
+  DEADLINE = 'deadline',
+  OTHER = 'other'
+}
+
+export enum CaseStatus {
+  ACTIVE = 'active',
+  CLOSED = 'closed',
+  PENDING = 'pending',
+  ARCHIVED = 'archived'
+}
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -28,78 +73,150 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 
-export { database };
+type FirebaseError = {
+  code: string;
+  message: string;
+};
 
+export class FirebaseService {
+  private static handleError(error: unknown, operation: string): never {
+    const fbError = error as FirebaseError;
+    console.error(`Firebase ${operation} error:`, fbError);
+    throw new Error(`${operation} failed: ${fbError.message}`);
+  }
 
-export const firebaseService = {
-  // פונקציה לקבלת כל המשימות
-  async getAllTasks() {
-    const snapshot = await get(ref(database, "tasks"));
-    return snapshot.exists() ? Object.values(snapshot.val()) : [];
-  },
+  private static async safeOperation<T>(
+    operation: () => Promise<T>,
+    operationName: string
+  ): Promise<T> {
+    try {
+      return await operation();
+    } catch (error) {
+      return this.handleError(error, operationName);
+    }
+  }
 
-  // פונקציה לקבלת כל התיקים
-  async getAllCases() {
-    const snapshot = await get(ref(database, "cases"));
-    return snapshot.exists() ? Object.values(snapshot.val()) : [];
-  },
+  static async getAllTasks(): Promise<Task[]> {
+    return this.safeOperation(async () => {
+      const snapshot = await get(ref(database, "tasks"));
+      return snapshot.exists() ? Object.values(snapshot.val()) : [];
+    }, "getAllTasks");
+  }
 
-  // פונקציה לשמירת משימה
-  async saveTask(task: any) {
-    const taskRef = push(ref(database, "tasks"));
-    await set(taskRef, task);
-  },
+  static async getAllCases(): Promise<Case[]> {
+    return this.safeOperation(async () => {
+      const snapshot = await get(ref(database, "cases"));
+      return snapshot.exists() ? Object.values(snapshot.val()) : [];
+    }, "getAllCases");
+  }
 
-  // פונקציה לשמירת תיק
-  async saveCase(caseItem: any) {
-    const caseRef = push(ref(database, "cases"));
-    await set(caseRef, caseItem);
-  },
+  static async saveTask(task: Omit<Task, 'id'>): Promise<string> {
+    return this.safeOperation(async () => {
+      const taskRef = push(ref(database, "tasks"));
+      const newTask = { ...task, id: taskRef.key };
+      await set(taskRef, newTask);
+      return taskRef.key!;
+    }, "saveTask");
+  }
 
-  // פונקציה לעדכון משימה
-  async updateTask(taskId: string, taskData: any) {
-    const taskRef = ref(database, `tasks/${taskId}`);
-    await update(taskRef, taskData);
-  },
+  static async saveCase(caseItem: Omit<Case, 'id'>): Promise<string> {
+    return this.safeOperation(async () => {
+      const caseRef = push(ref(database, "cases"));
+      const newCase = { ...caseItem, id: caseRef.key };
+      await set(caseRef, newCase);
+      return caseRef.key!;
+    }, "saveCase");
+  }
 
-  // פונקציה לעדכון תיק
-  async updateCase(caseId: string, caseData: any) {
-    const caseRef = ref(database, `cases/${caseId}`);
-    await update(caseRef, caseData);
-  },
+  static async updateTask(taskId: string, taskData: Partial<Task>): Promise<void> {
+    return this.safeOperation(async () => {
+      const taskRef = ref(database, `tasks/${taskId}`);
+      await update(taskRef, taskData);
+    }, "updateTask");
+  }
 
-  // פונקציה למחיקת משימה
-  async deleteTask(taskId: string) {
-    const taskRef = ref(database, `tasks/${taskId}`);
-    await remove(taskRef);
-  },
+  static async updateCase(caseId: string, caseData: Partial<Case>): Promise<void> {
+    return this.safeOperation(async () => {
+      const caseRef = ref(database, `cases/${caseId}`);
+      await update(caseRef, caseData);
+    }, "updateCase");
+  }
 
-  // פונקציה למחיקת תיק
-  async deleteCase(caseId: string) {
-    const caseRef = ref(database, `cases/${caseId}`);
-    await remove(caseRef);
-  },
+  static async deleteTask(taskId: string): Promise<void> {
+    return this.safeOperation(async () => {
+      const taskRef = ref(database, `tasks/${taskId}`);
+      await remove(taskRef);
+    }, "deleteTask");
+  }
 
-  async updateTaskStatus(taskId: string, newStatus: boolean): Promise<void> {
-    const taskRef = ref(database, `tasks/${taskId}`);
-    await update(taskRef, { completed: newStatus });
-  },
+  static async deleteCase(caseId: string): Promise<void> {
+    return this.safeOperation(async () => {
+      // First, delete all related tasks
+      const tasksSnapshot = await get(ref(database, "tasks"));
+      if (tasksSnapshot.exists()) {
+        const tasks = Object.entries(tasksSnapshot.val());
+        const relatedTasks = tasks.filter(([_, task]) => (task as Task).caseId === caseId);
+        
+        await Promise.all(
+          relatedTasks.map(([taskId]) => 
+            remove(ref(database, `tasks/${taskId}`))
+          )
+        );
+      }
+      
+      // Then delete the case itself
+      const caseRef = ref(database, `cases/${caseId}`);
+      await remove(caseRef);
+    }, "deleteCase");
+  }
 
-  // מאזין לשינויים במשימות
-  onTasksChange(callback: (tasks: any[]) => void) {
+  static async updateTaskStatus(taskId: string, newStatus: boolean): Promise<void> {
+    return this.safeOperation(async () => {
+      const taskRef = ref(database, `tasks/${taskId}`);
+      await update(taskRef, { completed: newStatus });
+    }, "updateTaskStatus");
+  }
+
+  static onTasksChange(callback: (tasks: Record<string, Task>) => void) {
     const tasksRef = ref(database, "tasks");
     return onValue(tasksRef, (snapshot) => {
-      const data = snapshot.exists() ? Object.values(snapshot.val()) : [];
-      callback(data);
+      const data = snapshot.exists() ? snapshot.val() : {};
+callback(data);
+    }, (error) => {
+      console.error("Error in tasks listener:", error);
     });
-  },
+  }
 
-  // מאזין לשינויים בתיקים
-  onCasesChange(callback: (cases: any[]) => void) {
+  static onCasesChange(callback: (cases: Record<string, Case>) => void) {
     const casesRef = ref(database, "cases");
     return onValue(casesRef, (snapshot) => {
-      const data = snapshot.exists() ? Object.values(snapshot.val()) : [];
-      callback(data);
+      const data = snapshot.exists() ? snapshot.val() : {};
+callback(data);
+    }, (error) => {
+      console.error("Error in cases listener:", error);
     });
-  },
-};
+  }
+
+  static async searchTasks(searchTerm: string): Promise<Task[]> {
+    return this.safeOperation(async () => {
+      const tasks = await this.getAllTasks();
+      return tasks.filter(task => 
+        task.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        task.taskName.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }, "searchTasks");
+  }
+
+  static async searchCases(searchTerm: string): Promise<Case[]> {
+    return this.safeOperation(async () => {
+      const cases = await this.getAllCases();
+      return cases.filter(caseItem => 
+        caseItem.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        caseItem.caseNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        caseItem.subject.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }, "searchCases");
+  }
+}
+
+export { app, database };

@@ -261,11 +261,11 @@ const TaskFormDialog: React.FC<TaskFormDialogProps> = ({
 
           <div className="flex justify-end gap-3 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            <X width={18} height={18} /> className="ml-2" /
+            <X className="ml-2" width={18} height={18} />
               ביטול
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-            <Save width={18} height={18} /> className="ml-2" /
+            <Save className="ml-2" width={18} height={18} />
             {isSubmitting ? 'טוען...' : initialTask ? 'עדכון משימה' : 'יצירת משימה'}
             </Button>
           </div>
