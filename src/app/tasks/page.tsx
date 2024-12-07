@@ -2,6 +2,7 @@
 
 import { Loader2 } from 'lucide-react';
 import TaskManager from '@/components/TaskManager';
+import { FirebaseService } from '@/lib/firebase';
 
 export default function TasksPage() {
   return (
