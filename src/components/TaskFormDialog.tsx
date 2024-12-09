@@ -14,7 +14,10 @@ import {
   X,
   Save,
   ListTodo,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Calendar,
+  FileText,
+  Hash
 } from 'lucide-react';
 import {
   Dialog,
@@ -79,12 +82,15 @@ const TaskFormDialog: React.FC<TaskFormDialogProps> = ({
     clientName: initialTask?.clientName || '',
     taskName: initialTask?.taskName || '',
     dueDate: initialTask?.dueDate ? initialTask.dueDate.split('T')[0] : '',
-    reminderDate: initialTask?.reminderDate,
+    reminderDate: initialTask?.reminderDate || '',
     type: initialTask?.type || TaskType.REGULAR,
-    court: initialTask?.court,
-    judge: initialTask?.judge,
-    courtDate: initialTask?.courtDate
+    court: initialTask?.court || '',
+    judge: initialTask?.judge || '',
+    courtDate: initialTask?.courtDate || '',
+    caseNumber: initialTask?.caseNumber || '',  // וידוא שזה קיים
+    legalNumber: initialTask?.legalNumber || '' // וידוא שזה קיים
   });
+  
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -104,15 +110,7 @@ const TaskFormDialog: React.FC<TaskFormDialogProps> = ({
       newErrors.dueDate = 'תאריך יעד הוא שדה חובה';
     }
     
-    if (formData.type === TaskType.HEARING) {
-      if (!formData.court?.trim()) {
-        newErrors.court = 'בית משפט הוא שדה חובה עבור דיון';
-      }
-      if (!formData.courtDate) {
-        newErrors.courtDate = 'תאריך דיון הוא שדה חובה';
-      }
-    }
-
+   
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -150,109 +148,107 @@ const TaskFormDialog: React.FC<TaskFormDialogProps> = ({
         </DialogDescription>
       </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4" dir="rtl">
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-            <ClipboardList width={18} height={18} />
-              סוג משימה
-            </Label>
-            <div className="flex gap-4">
-              <label className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="type"
-                  value={TaskType.REGULAR}
-                  checked={formData.type === TaskType.REGULAR}
-                  onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as TaskType }))}
-                  className="w-4 h-4 text-blue-600"
-                />
-                <span>משימה רגילה</span>
-              </label>
-              <label className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="type"
-                  value={TaskType.HEARING}
-                  checked={formData.type === TaskType.HEARING}
-                  onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as TaskType }))}
-                  className="w-4 h-4 text-blue-600"
-                />
-                <span>דיון משפטי</span>
-              </label>
-            </div>
-          </div>
+      <form onSubmit={handleSubmit} className="space-y-4" dir="rtl">
+  <div>
+    <Label htmlFor="clientName">שם לקוח *</Label>
+    <Input
+      id="clientName"
+      value={formData.clientName}
+      onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
+      required
+    />
+  </div>
 
-          <FormInput
-            label="שם לקוח"
-            value={formData.clientName}
-            onChange={(value) => setFormData(prev => ({ ...prev, clientName: value }))}
-            error={errors.clientName}
-            required
-            icon={<UserCircle2 width={18} height={18} />}
-          />
+  <div>
+    <Label htmlFor="taskName">שם משימה *</Label>
+    <Input
+      id="taskName"
+      value={formData.taskName}
+      onChange={(e) => setFormData({ ...formData, taskName: e.target.value })}
+      required
+    />
+  </div>
 
-          <FormInput
-            label="שם משימה"
-            value={formData.taskName}
-            onChange={(value) => setFormData(prev => ({ ...prev, taskName: value }))}
-            error={errors.taskName}
-            required
-            icon={<ClipboardList width={18} height={18} />}
-          />
+  <div>
+    <Label htmlFor="dueDate">תאריך יעד *</Label>
+    <Input
+      id="dueDate"
+      type="date"
+      value={formData.dueDate}
+      onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+      required
+    />
+  </div>
 
-          <FormInput
-            label="תאריך יעד"
-            type="date"
-            value={formData.dueDate}
-            onChange={(value) => setFormData(prev => ({ ...prev, dueDate: value }))}
-            error={errors.dueDate}
-            required
-            icon={<CalendarCheck width={18} height={18} />}
-          />
+  <div>
+    <Label htmlFor="reminderDate">תזכורת</Label>
+    <Input
+      id="reminderDate"
+      type="datetime-local"
+      value={formData.reminderDate}
+      onChange={(e) => setFormData({ ...formData, reminderDate: e.target.value })}
+    />
+  </div>
 
-          <FormInput
-            label="תזכורת"
-            type="datetime-local"
-            value={formData.reminderDate || ''}
-            onChange={(value) => setFormData(prev => ({ ...prev, reminderDate: value }))}
-            icon={<Clock width={18} height={18} />}
-          />
+  <div className="mt-6 p-4 bg-sky-50 rounded-lg space-y-4">
+    <div className="text-sky-900 font-medium">פרטי דיון משפטי (אופציונלי)</div>
+    
+    <div>
+      <Label htmlFor="court" className="flex items-center gap-2">
+        <Building2 className="w-4 h-4 text-sky-600" />
+        בית משפט
+      </Label>
+      <Input
+        id="court"
+        value={formData.court}
+        onChange={(e) => setFormData({ ...formData, court: e.target.value })}
+      />
+    </div>
 
-          {formData.type === TaskType.HEARING && (
-            <div className="space-y-4 border-t pt-4">
-              <h3 className="font-medium text-gray-900 flex items-center gap-2">
-              <Gavel width={18} height={18} />
-                פרטי דיון
-              </h3>
-              
-              <FormInput
-                label="בית משפט"
-                value={formData.court || ''}
-                onChange={(value) => setFormData(prev => ({ ...prev, court: value }))}
-                error={errors.court}
-                required
-                icon={<Building2 width={18} height={18} />}
-              />
+    <div>
+    <Label htmlFor="caseNumber">מספר תיק</Label>
+    <Input
+      id="caseNumber"
+      value={formData.caseNumber}
+      onChange={(e) => setFormData({ ...formData, caseNumber: e.target.value })}
+    />
+  </div>
 
-              <FormInput
-                label="שופט"
-                value={formData.judge || ''}
-                onChange={(value) => setFormData(prev => ({ ...prev, judge: value }))}
-                icon={<User width={18} height={18} />}
-              />
+  <div>
+    <Label htmlFor="legalNumber">מספר ליגל</Label>
+    <Input
+      id="legalNumber"
+      value={formData.legalNumber}
+      onChange={(e) => setFormData({ ...formData, legalNumber: e.target.value })}
+    />
+  </div>
 
-              <FormInput
-                label="תאריך ושעת דיון"
-                type="datetime-local"
-                value={formData.courtDate || ''}
-                onChange={(value) => setFormData(prev => ({ ...prev, courtDate: value }))}
-                error={errors.courtDate}
-                required
-                icon={<CalendarCheck width={18} height={18} />}
-              />
-            </div>
-          )}
+    <div>
+      <Label htmlFor="judge" className="flex items-center gap-2">
+        <Gavel className="w-4 h-4 text-sky-600" />
+        שופט
+      </Label>
+      <Input
+        id="judge"
+        value={formData.judge}
+        onChange={(e) => setFormData({ ...formData, judge: e.target.value })}
+      />
+    </div>
 
+    <div>
+      <Label htmlFor="courtDate" className="flex items-center gap-2">
+        <Calendar className="w-4 h-4 text-sky-600" />
+        תאריך ושעת דיון
+      </Label>
+      <Input
+        id="courtDate"
+        type="datetime-local"
+        value={formData.courtDate}
+        onChange={(e) => setFormData({ ...formData, courtDate: e.target.value })}
+      />
+    </div>
+  </div>
+      
           {errors.submit && (
             <Alert variant="destructive">
               <AlertDescription>{errors.submit}</AlertDescription>
@@ -276,3 +272,4 @@ const TaskFormDialog: React.FC<TaskFormDialogProps> = ({
 };
 
 export default TaskFormDialog;
+

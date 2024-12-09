@@ -1,6 +1,6 @@
 'use client';
 
-import BackupRestore from '@/components/BackupRestore';
+import BackupRestore from '@/components/BackupRestoreButtons';
 
 export default function BackupPage() {
   return (

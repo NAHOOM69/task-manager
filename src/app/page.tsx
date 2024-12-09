@@ -3,11 +3,11 @@
 import { Briefcase, ListTodo, Clock, CalendarCheck2 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { firebaseService } from '@/lib/firebase';
+import { FirebaseService } from '@/lib/firebase';
 import type { Task } from '@/Types/Task';
 import type { Case } from '@/Types/Case';
 import { TaskType } from '@/Types/Task';
-import BackupRestore from '@/components/BackupRestore';
+import BackupRestore from '@/components/BackupRestoreButtons';
 
 export default function HomePage() {
   const [stats, setStats] = useState({
@@ -18,14 +18,15 @@ export default function HomePage() {
   });
 
   useEffect(() => {
-    const unsubscribeTasks = firebaseService.onTasksChange((tasks: Task[]) => {
+    const unsubscribeTasks = FirebaseService.onTasksChange((tasksRecord: Record<string, Task>) => {
+      const tasks = Object.values(tasksRecord);
       const now = new Date();
       const upcomingHearings = tasks.filter(task => 
         task.type === TaskType.HEARING && 
         !task.completed && 
         new Date(task.dueDate) > now
       ).length;
-
+  
       setStats(prev => ({
         ...prev,
         activeTasks: tasks.filter(t => !t.completed).length,
@@ -33,14 +34,15 @@ export default function HomePage() {
         completedTasks: tasks.filter(t => t.completed).length
       }));
     });
-
-    const unsubscribeCases = firebaseService.onCasesChange((cases: Case[]) => {
+  
+    const unsubscribeCases = FirebaseService.onCasesChange((casesRecord: Record<string, Case>) => {
+      const cases = Object.values(casesRecord);
       setStats(prev => ({
         ...prev,
         activeCases: cases.filter(c => c.status === 'active').length
       }));
     });
-
+  
     return () => {
       unsubscribeTasks();
       unsubscribeCases();

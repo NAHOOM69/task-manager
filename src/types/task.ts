@@ -16,6 +16,9 @@ export interface Task {
   judge?: string;
   type: TaskType;
   caseId?: string;
+  caseNumber?: string;
+  legalNumber?: string;
+
 }
 
-export interface TaskInput extends Omit<Task, 'id' | 'completed' | 'notified'> {}
+export interface TaskInput extends Omit<Task, 'id' | 'completed' | 'notified' | '#hash'> {}

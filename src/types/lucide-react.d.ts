@@ -31,5 +31,10 @@ declare module 'lucide-react' {
   export const Edit: React.FC<React.SVGProps<SVGSVGElement>>;
   export const User2: React.FC<React.SVGProps<SVGSVGElement>>;
   export const Home: React.FC<React.SVGProps<SVGSVGElement>>;
+  export const Upload: React.FC<React.SVGProps<SVGSVGElement>>;
+  export const Copy: React.FC<React.SVGProps<SVGSVGElement>>;
+  export const Calendar: React.FC<React.SVGProps<SVGSVGElement>>;
+  export const Hash: React.FC<React.SVGProps<SVGSVGElement>>;
+  export const FileText: React.FC<React.SVGProps<SVGSVGElement>>;
    
 }
