@@ -141,23 +141,38 @@ const TaskManager: React.FC = () => {
   
     try {
       setIsLoading(true);
+      // יצירת אובייקט עדכון עם כל השדות המעודכנים
       const updatedTask: Partial<Task> = {
-        clientName: taskData.clientName,
-        taskName: taskData.taskName,
-        dueDate: taskData.dueDate,
+        clientName: taskData.clientName || selectedTask.clientName,
+        taskName: taskData.taskName || selectedTask.taskName,
+        dueDate: taskData.dueDate || selectedTask.dueDate,
         reminderDate: taskData.reminderDate,
-        type: taskData.type,
+        type: taskData.type || selectedTask.type,
         court: taskData.court,
         judge: taskData.judge,
         courtDate: taskData.courtDate,
-        caseNumber: taskData.caseNumber,    // הוספנו
-        legalNumber: taskData.legalNumber   // הוספנו
+        caseNumber: taskData.caseNumber,
+        legalNumber: taskData.legalNumber,
+        caseId: taskData.caseId || selectedTask.caseId,
+        // שמירה על שדות מערכת
+        completed: selectedTask.completed,
+        notified: selectedTask.notified
       };
   
-      await FirebaseService.updateTask(String(selectedTask.id), updatedTask);
+      await FirebaseService.updateTask(selectedTask.id, updatedTask);
+      
+      // עדכון מקומי של הרשימה
+      setTasks(prevTasks => 
+        prevTasks.map(t => 
+          t.id === selectedTask.id ? { ...t, ...updatedTask } : t
+        )
+      );
+
       setSelectedTask(null);
       setIsFormOpen(false);
+      
     } catch (error) {
+      console.error('Error updating task:', error);
       setError('אירעה שגיאה בעדכון המשימה. אנא נסה שוב.');
     } finally {
       setIsLoading(false);

@@ -146,33 +146,6 @@ class FirebaseService {
     }, "saveCase");
   }
 
- // בקובץ firebase.ts, נעדכן את הפונקציה updateTask:
-
- static async updateTask(taskId: string, taskData: Partial<Task>): Promise<void> {
-  return this.safeOperation(async () => {
-    const taskRef = ref(database, `tasks/${taskId}`);
-    const taskSnapshot = await get(taskRef);
-    
-    if (!taskSnapshot.exists()) {
-      throw new Error('Task not found');
-    }
-
-    const existingTask = taskSnapshot.val();
-    
-    // מיזוג הנתונים עם טיפול בערכי null/undefined
-    const updatedData = {
-      ...existingTask,
-      ...taskData,
-      // שמירה על הערכים הקיימים אם לא התקבלו חדשים
-      caseNumber: taskData.caseNumber !== undefined ? taskData.caseNumber : (existingTask.caseNumber || ''),
-      legalNumber: taskData.legalNumber !== undefined ? taskData.legalNumber : (existingTask.legalNumber || ''),
-      updatedAt: new Date().toISOString()
-    };
-
-    await update(taskRef, updatedData);
-  }, "updateTask");
-}
-
 
   static async getTask(taskId: string): Promise<Task | null> {
     return this.safeOperation(async () => {
@@ -182,10 +155,6 @@ class FirebaseService {
       return { ...snapshot.val(), id: taskId };
     }, "getTask");
   }
-
-
-
-
 
 
   static async updateCase(caseId: string, caseData: Partial<Case>): Promise<void> {
@@ -256,6 +225,70 @@ class FirebaseService {
       }
     }, "deleteTask");
   }
+
+
+  static async updateTask(taskId: string, taskData: Partial<Task>): Promise<void> {
+    return this.safeOperation(async () => {
+      try {
+        // קודם נחפש את המשימה בכל המשימות
+        const tasksRef = ref(database, 'tasks');
+        const tasksSnapshot = await get(tasksRef);
+        
+        if (!tasksSnapshot.exists()) {
+          throw new Error('No tasks found in database');
+        }
+  
+        const tasks = tasksSnapshot.val();
+        // מחפשים את המפתח של המשימה לפי ה-id
+        const firebaseKey = Object.keys(tasks).find(key => 
+          tasks[key].id === taskId || key === taskId
+        );
+  
+        if (!firebaseKey) {
+          throw new Error(`Task with ID ${taskId} not found`);
+        }
+  
+        // עכשיו כשיש לנו את המפתח הנכון, נבצע את העדכון
+        const taskRef = ref(database, `tasks/${firebaseKey}`);
+        const existingTask = tasks[firebaseKey];
+  
+        const updatedData = {
+          ...existingTask,
+          ...taskData,
+          id: taskId,
+          completed: taskData.completed ?? existingTask.completed ?? false,
+          notified: taskData.notified ?? existingTask.notified ?? false,
+          caseNumber: taskData.caseNumber ?? existingTask.caseNumber ?? '',
+          legalNumber: taskData.legalNumber ?? existingTask.legalNumber ?? '',
+          court: taskData.court ?? existingTask.court ?? '',
+          judge: taskData.judge ?? existingTask.judge ?? '',
+          courtDate: taskData.courtDate ?? existingTask.courtDate ?? '',
+          reminderDate: taskData.reminderDate ?? existingTask.reminderDate ?? '',
+          updatedAt: new Date().toISOString()
+        };
+  
+        // הסרת שדות undefined
+        Object.keys(updatedData).forEach(key => {
+          if (updatedData[key] === undefined) {
+            delete updatedData[key];
+          }
+        });
+  
+        await update(taskRef, updatedData);
+        console.log('Task updated successfully:', { firebaseKey, updatedData });
+      } catch (error) {
+        console.error('Error updating task:', error);
+        throw error;
+      }
+    }, "updateTask");
+  }
+
+
+
+
+
+
+
 
 
   static async updateTaskStatus(taskId: string, newStatus: boolean): Promise<void> {
