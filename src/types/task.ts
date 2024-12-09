@@ -4,7 +4,7 @@ export enum TaskType {
 }
 
 export interface Task {
-  id: string;            // שינוי מ-number ל-string
+  id: string;
   clientName: string;
   taskName: string;
   dueDate: string;
@@ -16,9 +16,8 @@ export interface Task {
   judge?: string;
   type: TaskType;
   caseId?: string;
-  caseNumber?: string;
-  legalNumber?: string;
-
+  caseNumber?: string;   // חזרה לאופציונלי
+  legalNumber?: string;  // חזרה לאופציונלי
 }
 
 export interface TaskInput extends Omit<Task, 'id' | 'completed' | 'notified' | '#hash'> {}

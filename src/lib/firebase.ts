@@ -106,22 +106,21 @@ class FirebaseService {
         taskName: taskData.taskName,
         dueDate: taskData.dueDate,
         type: taskData.type,
-        // שדות אופציונליים - תמיד יהיו קיימים אבל יכולים להיות ריקים
         reminderDate: taskData.reminderDate || '',
         court: taskData.court || '',
         judge: taskData.judge || '',
         courtDate: taskData.courtDate || '',
         caseId: taskData.caseId || '',
-        caseNumber: taskData.caseNumber || '',    // הוספנו
-        legalNumber: taskData.legalNumber || ''   // הוספנו
+        caseNumber: taskData.caseNumber || '',
+        legalNumber: taskData.legalNumber || '',
+        completed: false,
+        notified: false
       };
   
       const taskRef = push(ref(database, "tasks"));
       const newTask = { 
         ...cleanTask, 
-        id: taskRef.key,
-        completed: false,
-        notified: false
+        id: taskRef.key
       };
   
       await set(taskRef, newTask);
@@ -147,29 +146,32 @@ class FirebaseService {
     }, "saveCase");
   }
 
-  static async updateTask(taskId: string, taskData: Partial<Task>): Promise<void> {
-    return this.safeOperation(async () => {
-      // קודם נמצא את המשימה הקיימת
-      const taskRef = ref(database, `tasks/${taskId}`);
-      const taskSnapshot = await get(taskRef);
-      if (!taskSnapshot.exists()) {
-        throw new Error('Task not found');
-      }
-  
-      const existingTask = taskSnapshot.val();
-      
-      // נשלב את הנתונים החדשים עם הקיימים
-      const updatedData = {
-        ...existingTask,
-        ...taskData,
-        updatedAt: new Date().toISOString()
-      };
-  
-      // ננקה ונעדכן
-      const cleanTask = this.cleanObject(updatedData);
-      await update(taskRef, cleanTask);
-    }, "updateTask");
-  }
+ // בקובץ firebase.ts, נעדכן את הפונקציה updateTask:
+
+ static async updateTask(taskId: string, taskData: Partial<Task>): Promise<void> {
+  return this.safeOperation(async () => {
+    const taskRef = ref(database, `tasks/${taskId}`);
+    const taskSnapshot = await get(taskRef);
+    
+    if (!taskSnapshot.exists()) {
+      throw new Error('Task not found');
+    }
+
+    const existingTask = taskSnapshot.val();
+    
+    // מיזוג הנתונים עם טיפול בערכי null/undefined
+    const updatedData = {
+      ...existingTask,
+      ...taskData,
+      // שמירה על הערכים הקיימים אם לא התקבלו חדשים
+      caseNumber: taskData.caseNumber !== undefined ? taskData.caseNumber : (existingTask.caseNumber || ''),
+      legalNumber: taskData.legalNumber !== undefined ? taskData.legalNumber : (existingTask.legalNumber || ''),
+      updatedAt: new Date().toISOString()
+    };
+
+    await update(taskRef, updatedData);
+  }, "updateTask");
+}
 
 
   static async getTask(taskId: string): Promise<Task | null> {
@@ -266,39 +268,52 @@ class FirebaseService {
     }, "updateTaskStatus");
   }
 
-  static onTasksChange(callback: (tasks: Record<string, Task>) => void) {
-    const tasksRef = ref(database, "tasks");
-    
-    return onValue(tasksRef, (snapshot) => {
-      // נגדיר טיפוס מפורש לדאטה
-      const data: Record<string, Task> = snapshot.exists() ? snapshot.val() : {};
-      
-      // נשתמש ב-type assertion כדי להבטיח שאנחנו מקבלים את הטיפוס הנכון
-      const formattedData = Object.entries(data).reduce<Record<string, Task>>((acc, [key, value]) => {
-        // נוודא שה-value הוא מהטיפוס הנכון
-        const taskValue = value as Task;
-        
+// בקובץ firebase.ts, נעדכן את הפונקציה onTasksChange:
+
+static onTasksChange(callback: (tasks: Record<string, Task>) => void) {
+  const tasksRef = ref(database, "tasks");
+  
+  return onValue(tasksRef, (snapshot) => {
+    try {
+      if (!snapshot.exists()) {
+        callback({});
+        return;
+      }
+
+      const data = snapshot.val();
+      const formattedData = Object.entries(data).reduce<Record<string, Task>>((acc, [key, value]: [string, any]) => {
+        if (!value) return acc;
+
         acc[key] = {
-          ...taskValue,
-          completed: Boolean(taskValue.completed),
-          id: taskValue.id || key,  // נשתמש במפתח כ-ID אם אין ID
-          notified: Boolean(taskValue.notified),
-          // נוסיף ערכי ברירת מחדל לשדות אופציונליים
-          type: taskValue.type || 'REGULAR',
-          court: taskValue.court || '',
-          judge: taskValue.judge || '',
-          courtDate: taskValue.courtDate || '',
-          reminderDate: taskValue.reminderDate || ''
+          id: value.id || key,
+          clientName: value.clientName || '',
+          taskName: value.taskName || '',
+          dueDate: value.dueDate || '',
+          completed: Boolean(value.completed),
+          notified: Boolean(value.notified),
+          type: value.type || TaskType.REGULAR,
+          reminderDate: value.reminderDate || '',
+          court: value.court || '',
+          judge: value.judge || '',
+          courtDate: value.courtDate || '',
+          caseId: value.caseId || '',
+          caseNumber: value.caseNumber || '',
+          legalNumber: value.legalNumber || ''
         };
         
         return acc;
       }, {});
-  
+
       callback(formattedData);
-    }, (error) => {
-      console.error("Error in tasks listener:", error);
-    });
-  }
+    } catch (error) {
+      console.error('Error in tasks formatting:', error);
+      callback({});
+    }
+  }, (error) => {
+    console.error("Error in tasks listener:", error);
+    callback({});
+  });
+}
 
   static onCasesChange(callback: (cases: Record<string, Case>) => void) {
     const casesRef = ref(database, "cases");

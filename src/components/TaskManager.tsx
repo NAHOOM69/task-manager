@@ -142,20 +142,19 @@ const TaskManager: React.FC = () => {
     try {
       setIsLoading(true);
       const updatedTask: Partial<Task> = {
-  clientName: taskData.clientName,
-  taskName: taskData.taskName,
-  dueDate: taskData.dueDate,
-  reminderDate: taskData.reminderDate,
-  type: taskData.type,
-  court: taskData.court,
-  judge: taskData.judge,
-  courtDate: taskData.courtDate
-};
+        clientName: taskData.clientName,
+        taskName: taskData.taskName,
+        dueDate: taskData.dueDate,
+        reminderDate: taskData.reminderDate,
+        type: taskData.type,
+        court: taskData.court,
+        judge: taskData.judge,
+        courtDate: taskData.courtDate,
+        caseNumber: taskData.caseNumber,    // הוספנו
+        legalNumber: taskData.legalNumber   // הוספנו
+      };
   
-      // יש לוודא שמועברים שני פרמטרים: מזהה המשימה והמידע המעודכן
       await FirebaseService.updateTask(String(selectedTask.id), updatedTask);
-
-  
       setSelectedTask(null);
       setIsFormOpen(false);
     } catch (error) {
